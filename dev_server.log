@@ -2,12 +2,12 @@
 > minty@0.1.0 dev
 > next dev
 
-▲ Next.js 16.2.6 (Turbopack)
-- Local:         http://localhost:3000
-- Network:       http://192.168.0.2:3000
-✓ Ready in 515ms
+  ▲ Next.js 14.2.13
+  - Local:        http://localhost:3000
 
-○ Compiling /import ...
- GET /import 200 in 5.3s (next.js: 4.9s, application-code: 342ms)
- GET /import 200 in 78ms (next.js: 8ms, application-code: 70ms)
-✓ Compiled in 26ms
+ ✓ Starting...
+ ✓ Ready in 1667ms
+ ○ Compiling /import ...
+ ✓ Compiled /import in 4.4s (538 modules)
+ GET /import 200 in 4927ms
+ ✓ Compiled in 564ms (260 modules)
