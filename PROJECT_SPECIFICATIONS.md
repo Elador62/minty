@@ -1,4 +1,4 @@
-# Spécifications de l'Application : CardMarket Sales Manager
+# Spécifications de l'Application : Minty (CardMarket Sales Manager)
 
 Ce document sert de guide de référence pour le développement de l'application de gestion de ventes CardMarket (Pokémon & Magic).
 
