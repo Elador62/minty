@@ -23,7 +23,7 @@ cp .env.example .env.local
 Remplissez les variables `NEXT_PUBLIC_SUPABASE_URL` et `NEXT_PUBLIC_SUPABASE_ANON_KEY` avec vos identifiants disponibles dans les paramètres de votre projet Supabase (API settings).
 
 ### 4. Base de données
-Exécutez le script SQL situé dans `supabase/migrations/20240509_initial_schema.sql` dans l'éditeur SQL de votre tableau de bord Supabase pour créer les tables nécessaires.
+Exécutez le script SQL situé dans `supabase/migrations/20240509_initial_schema.sql` dans l'éditeur SQL de votre tableau de bord Supabase. Ce script est **idempotent** : vous pouvez le relancer plusieurs fois pour mettre à jour votre structure sans perdre de données.
 
 ### 5. Lancement
 ```bash
