@@ -112,7 +112,8 @@ export default function ImportPage() {
         orderId = existingOrder.id;
 
         // Supprimer les anciens items pour les recréer
-        await supabase.from('order_items').delete().eq('order_id', orderId);
+        const { error: deleteError } = await supabase.from('order_items').delete().eq('order_id', orderId);
+        if (deleteError) throw deleteError;
       } else {
         const { data: order, error: orderError } = await supabase
           .from('orders')

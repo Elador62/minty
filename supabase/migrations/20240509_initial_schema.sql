@@ -80,6 +80,18 @@ CREATE POLICY "Les utilisateurs peuvent insérer les items de leurs commandes"
     SELECT 1 FROM orders WHERE orders.id = order_items.order_id AND orders.user_id = auth.uid()
   ));
 
+CREATE POLICY "Les utilisateurs peuvent modifier les items de leurs commandes"
+  ON order_items FOR UPDATE
+  USING (EXISTS (
+    SELECT 1 FROM orders WHERE orders.id = order_items.order_id AND orders.user_id = auth.uid()
+  ));
+
+CREATE POLICY "Les utilisateurs peuvent supprimer les items de leurs commandes"
+  ON order_items FOR DELETE
+  USING (EXISTS (
+    SELECT 1 FROM orders WHERE orders.id = order_items.order_id AND orders.user_id = auth.uid()
+  ));
+
 -- Table pour le suivi des prix (Stock)
 CREATE TABLE inventory_items (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,

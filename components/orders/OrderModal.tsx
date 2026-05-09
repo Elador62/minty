@@ -57,7 +57,8 @@ export function OrderModal({ order, isOpen, onClose, onRefresh }: OrderModalProp
         // Update
         const { error } = await supabase.from('orders').update({ ...formData }).eq('id', orderId);
         if (error) throw error;
-        await supabase.from('order_items').delete().eq('order_id', orderId);
+        const { error: deleteError } = await supabase.from('order_items').delete().eq('order_id', orderId);
+        if (deleteError) throw deleteError;
       } else {
         // Create
         const { data, error } = await supabase.from('orders').insert({ ...formData, user_id: user.id }).select().single();
