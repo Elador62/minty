@@ -37,9 +37,25 @@ export function Navbar() {
   return (
     <nav className="border-b bg-white">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-        <Link href="/" className="font-bold text-xl text-primary">
-          Minty
-        </Link>
+        <div className="flex items-center gap-8">
+          <Link href="/" className="font-bold text-xl text-primary">
+            Minty
+          </Link>
+
+          {user && (
+            <div className="hidden md:flex items-center gap-4">
+              <Link href="/dashboard" className="text-sm font-medium hover:text-primary transition-colors">
+                Dashboard
+              </Link>
+              <Link href="/kanban" className="text-sm font-medium hover:text-primary transition-colors">
+                Kanban
+              </Link>
+              <Link href="/import" className="text-sm font-medium hover:text-primary transition-colors">
+                Import
+              </Link>
+            </div>
+          )}
+        </div>
 
         <div className="flex items-center gap-4">
           {user ? (

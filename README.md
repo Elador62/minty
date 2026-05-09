@@ -32,12 +32,17 @@ npm run dev
 L'application sera disponible sur [http://localhost:3000](http://localhost:3000).
 
 ## 📦 Sprint 1 : Module d'Importation
-La fonctionnalité actuelle permet d'importer des commandes via le parser d'emails.
-Rendez-vous sur : [http://localhost:3000/import](http://localhost:3000/import)
+Importez vos commandes CardMarket via le parser d'emails.
+Rendez-vous sur : `/import`
 
-1. Copiez le contenu d'un email CardMarket (Payé, Vendu, ou Livré).
+1. Copiez le contenu d'un email CardMarket.
 2. Collez-le dans la zone de texte.
-3. Cliquez sur **Analyser l'email** pour voir le résultat.
+3. Cliquez sur **Analyser l'email** puis **Enregistrer**.
+
+## 📊 Sprint 2 : Dashboard & Kanban
+Suivez votre activité en temps réel.
+- **Dashboard :** Visualisez votre CA total, la répartition Pokémon/Magic et vos meilleures ventes.
+- **Kanban :** Gérez le cycle de vie de vos commandes (À Préparer -> En cours -> Expédié -> Terminé) par simple clic.
 
 ## 🛠 Stack Technique
 - **Framework :** Next.js 14 (App Router)

@@ -54,6 +54,7 @@ CREATE TABLE order_items (
   order_id UUID REFERENCES orders ON DELETE CASCADE NOT NULL,
   card_name TEXT NOT NULL,
   expansion TEXT,
+  game TEXT, -- 'pokemon' or 'magic'
   condition TEXT,
   language TEXT,
   is_foil BOOLEAN DEFAULT FALSE,
