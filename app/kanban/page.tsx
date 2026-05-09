@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowRight, Package, Truck, CheckCircle2, Clock } from "lucide-react";
+import { ArrowRight, Package, Truck, CheckCircle2, Clock, ShieldAlert } from "lucide-react";
 
 type OrderStatus = 'paid' | 'preparing' | 'shipped' | 'completed';
 
@@ -16,6 +16,7 @@ interface Order {
   buyer_name: string;
   total_price: number;
   status: OrderStatus;
+  is_trust_service: boolean;
   created_at: string;
 }
 
@@ -35,7 +36,7 @@ export default function KanbanPage() {
   const fetchOrders = async () => {
     const { data } = await supabase
       .from('orders')
-      .select('id, external_order_id, buyer_name, total_price, status, created_at')
+      .select('id, external_order_id, buyer_name, total_price, status, is_trust_service, created_at')
       .order('created_at', { ascending: false });
 
     setOrders(data || []);
@@ -67,6 +68,20 @@ export default function KanbanPage() {
     }
   };
 
+  const toggleTrustService = async (orderId: string, current: boolean) => {
+    const { error } = await supabase
+      .from('orders')
+      .update({ is_trust_service: !current })
+      .eq('id', orderId);
+
+    if (error) {
+       toast({ title: "Erreur", description: error.message, variant: "destructive" });
+    } else {
+       toast({ title: "Trust Service mis à jour" });
+       fetchOrders();
+    }
+  };
+
   if (isLoading) return <div className="container mx-auto py-10">Chargement du Kanban...</div>;
 
   return (
@@ -90,7 +105,7 @@ export default function KanbanPage() {
               {orders
                 .filter((o) => o.status === col.id)
                 .map((order) => (
-                  <Card key={order.id} className="shadow-sm border-none">
+                  <Card key={order.id} className={`shadow-sm border-none ${order.is_trust_service ? 'ring-2 ring-red-500 ring-offset-2' : ''}`}>
                     <CardHeader className="p-4 pb-2">
                       <div className="flex justify-between items-start gap-2">
                         <span className="text-xs font-mono text-muted-foreground">{order.external_order_id}</span>
@@ -98,17 +113,29 @@ export default function KanbanPage() {
                       </div>
                       <CardTitle className="text-sm">{order.buyer_name}</CardTitle>
                     </CardHeader>
-                    <CardContent className="p-4 pt-0 flex justify-end">
-                      {col.id !== 'completed' && (
-                        <Button
+                    <CardContent className="p-4 pt-0 space-y-3">
+                      <div className="flex justify-between items-center">
+                         <Button
                           variant="ghost"
-                          size="sm"
-                          className="h-8 text-xs hover:bg-slate-200"
-                          onClick={() => moveOrder(order.id, order.status)}
+                          size="icon"
+                          className={`h-8 w-8 ${order.is_trust_service ? 'text-red-600' : 'text-muted-foreground opacity-30'}`}
+                          onClick={() => toggleTrustService(order.id, order.is_trust_service)}
+                          title="Marquer comme Trust Service"
                         >
-                          Suivant <ArrowRight className="ml-1 h-3 w-3" />
+                          <ShieldAlert className="h-4 w-4" />
                         </Button>
-                      )}
+
+                        {col.id !== 'completed' && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 text-xs hover:bg-slate-200"
+                            onClick={() => moveOrder(order.id, order.status)}
+                          >
+                            Suivant <ArrowRight className="ml-1 h-3 w-3" />
+                          </Button>
+                        )}
+                      </div>
                     </CardContent>
                   </Card>
                 ))}

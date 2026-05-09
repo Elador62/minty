@@ -53,6 +53,9 @@ export function Navbar() {
               <Link href="/import" className="text-sm font-medium hover:text-primary transition-colors">
                 Import
               </Link>
+              <Link href="/shipping" className="text-sm font-medium hover:text-primary transition-colors">
+                Expédition
+              </Link>
             </div>
           )}
         </div>

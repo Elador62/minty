@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { AlertCircle, CheckCircle2, Import, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { getCardThumbnail } from "@/lib/cardmarket/images";
 
 export default function ImportPage() {
   const [emailText, setEmailText] = useState("");
@@ -65,15 +66,23 @@ export default function ImportPage() {
 
       if (orderError) throw orderError;
 
-      // 2. Insérer les items
-      const itemsToInsert = parsedData.items.map(item => ({
-        order_id: order.id,
-        card_name: item.name,
-        expansion: item.expansion,
-        condition: item.condition,
-        language: item.language,
-        quantity: item.quantity,
-        price: item.price
+      // 2. Insérer les items avec récupération d'image
+      const itemsToInsert = await Promise.all(parsedData.items.map(async (item) => {
+        const game = item.expansion.toLowerCase().includes('magic') || item.details === 'R' ? 'magic' : 'pokemon';
+        // Note: Cette détection est simplifiée pour le Sprint 3
+        const imageUrl = await getCardThumbnail(item.name, game);
+
+        return {
+          order_id: order.id,
+          card_name: item.name,
+          expansion: item.expansion,
+          game,
+          condition: item.condition,
+          language: item.language,
+          quantity: item.quantity,
+          price: item.price,
+          image_url: imageUrl
+        };
       }));
 
       const { error: itemsError } = await supabase
