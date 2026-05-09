@@ -6,12 +6,19 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Printer, Loader2, CheckCircle2 } from "lucide-react";
+import { Printer, CheckCircle2, Search } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 export default function ShippingPage() {
   const [orders, setOrders] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({});
+  const [zoomedImage, setZoomedImage] = useState<{ url: string, name: string } | null>(null);
   const supabase = createClient();
 
   useEffect(() => {
@@ -35,7 +42,7 @@ export default function ShippingPage() {
     setCheckedItems(prev => ({ ...prev, [itemId]: !prev[itemId] }));
   };
 
-  if (isLoading) return <div className="container mx-auto py-10">Chargement...</div>;
+  if (isLoading) return <div className="container mx-auto py-10 text-center">Chargement...</div>;
 
   return (
     <div className="container mx-auto py-10 space-y-8 print:p-0 print:m-0 print:space-y-0">
@@ -54,7 +61,6 @@ export default function ShippingPage() {
         {orders.map((order) => (
           <div key={order.id} className="print:page-break-after-always print:min-h-screen print:flex print:flex-col">
             <Card className={`overflow-hidden print:shadow-none print:border-none print:rounded-none h-full flex flex-col ${order.is_trust_service ? 'border-4 border-red-600' : ''}`}>
-              {/* PARTIE HAUTE : INFOS COMMANDE */}
               <CardHeader className="bg-slate-50 flex flex-row items-center justify-between py-4 print:bg-white print:border-b-2 print:border-black">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
@@ -75,7 +81,6 @@ export default function ShippingPage() {
               </CardHeader>
 
               <CardContent className="flex-1 py-8 grid grid-cols-1 md:grid-cols-2 gap-12 print:grid-cols-1">
-                {/* ADRESSE */}
                 <div className="space-y-4">
                   <h4 className="font-bold text-sm uppercase text-muted-foreground border-b pb-1 print:text-black print:border-black">Adresse de livraison</h4>
                   <pre className="whitespace-pre-wrap font-sans text-lg bg-slate-50 p-6 rounded border print:bg-white print:border-black print:p-4">
@@ -83,7 +88,6 @@ export default function ShippingPage() {
                   </pre>
                 </div>
 
-                {/* ITEMS (Moitié basse en impression via flex-1) */}
                 <div className="space-y-4 print:mt-auto">
                   <h4 className="font-bold text-sm uppercase text-muted-foreground border-b pb-1 print:text-black print:border-black">Articles à préparer</h4>
                   <div className="space-y-4">
@@ -97,9 +101,17 @@ export default function ShippingPage() {
                           />
                         </div>
 
-                        <div className="w-14 h-20 bg-slate-100 rounded border flex items-center justify-center text-[10px] text-muted-foreground shrink-0 overflow-hidden print:border-black">
+                        <div
+                          className="w-14 h-20 bg-slate-100 rounded border flex items-center justify-center text-[10px] text-muted-foreground shrink-0 overflow-hidden cursor-zoom-in group relative print:border-black"
+                          onClick={() => item.image_url && setZoomedImage({ url: item.image_url, name: item.card_name })}
+                        >
                           {item.image_url ? (
-                            <img src={item.image_url} alt={item.card_name} className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                            <>
+                              <img src={item.image_url} alt={item.card_name} className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                              <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity print:hidden">
+                                <Search className="text-white h-4 w-4" />
+                              </div>
+                            </>
                           ) : (
                             <div className="text-center p-1">SANS PHOTO</div>
                           )}
@@ -132,6 +144,22 @@ export default function ShippingPage() {
           </div>
         ))}
       </div>
+
+      <Dialog open={!!zoomedImage} onOpenChange={() => setZoomedImage(null)}>
+        <DialogContent className="max-w-md p-0 overflow-hidden border-none bg-transparent shadow-none">
+          {zoomedImage && (
+            <div className="flex flex-col items-center">
+              <img
+                src={zoomedImage.url}
+                alt={zoomedImage.name}
+                className="w-full h-auto rounded-lg shadow-2xl"
+                referrerPolicy="no-referrer"
+              />
+              <p className="mt-4 text-white font-bold bg-black/50 px-4 py-2 rounded-full">{zoomedImage.name}</p>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <style jsx global>{`
         @media print {

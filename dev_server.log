@@ -64,3 +64,28 @@ Import trace for requested module:
  ✓ Compiled in 382ms (417 modules)
  ✓ Compiled in 230ms (417 modules)
  ✓ Compiled in 656ms (417 modules)
+ ⨯ ./app/import/page.tsx
+Error:
+  [31mx[0m the name `itemsError` is defined multiple times
+     ,-[[36;1;4m/app/app/import/page.tsx[0m:145:1]
+ [2m145[0m |       // S'assurer que les nouveaux items n'ont pas d'ID pour éviter les conflits lors de l'insertion
+ [2m146[0m |       const cleanItems = itemsToInsert.map(({ id, ...rest }: any) => rest);
+ [2m147[0m |
+ [2m148[0m |       const { error: itemsError } = await supabase
+     : [31;1m                     ^^^^^|^^^^[0m
+     :                           [31;1m`-- [31;1mprevious definition of `itemsError` here[0m[0m
+ [2m149[0m |         .from('order_items')
+ [2m150[0m |         .insert(cleanItems);
+ [2m151[0m |
+ [2m152[0m |       const { error: itemsError } = await supabase
+     : [33;1m                     ^^^^^|^^^^[0m
+     :                           [33;1m`-- [33;1m`itemsError` redefined here[0m[0m
+ [2m153[0m |         .from('order_items')
+ [2m154[0m |         .insert(itemsToInsert);
+     `----
+
+Import trace for requested module:
+./app/import/page.tsx
+ ✓ Compiled in 2.2s (835 modules)
+ ✓ Compiled in 344ms (417 modules)
+ ✓ Compiled in 370ms (417 modules)

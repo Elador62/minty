@@ -111,7 +111,7 @@ export default function ImportPage() {
         if (updateError) throw updateError;
         orderId = existingOrder.id;
 
-        // Supprimer les anciens items pour les recréer (plus simple que de matcher)
+        // Supprimer les anciens items pour les recréer
         await supabase.from('order_items').delete().eq('order_id', orderId);
       } else {
         const { data: order, error: orderError } = await supabase
@@ -142,9 +142,12 @@ export default function ImportPage() {
         };
       }));
 
+      // S'assurer de ne pas avoir d'id
+      const cleanItems = itemsToInsert.map(({ id, ...rest }: any) => rest);
+
       const { error: itemsError } = await supabase
         .from('order_items')
-        .insert(itemsToInsert);
+        .insert(cleanItems);
 
       if (itemsError) throw itemsError;
 
