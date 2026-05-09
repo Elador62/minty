@@ -7,20 +7,99 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, CheckCircle2, Import } from "lucide-react";
+import { AlertCircle, CheckCircle2, Import, Loader2 } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 export default function ImportPage() {
   const [emailText, setEmailText] = useState("");
   const [parsedData, setParsedData] = useState<ParsedOrder | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const { toast } = useToast();
 
   const handleParse = () => {
     const result = parseCardMarketEmail(emailText);
     setParsedData(result);
+    if (!result) {
+      toast({
+        title: "Erreur d'analyse",
+        description: "Le format de l'email n'a pas été reconnu.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleSave = async () => {
-    // Logique de sauvegarde vers Supabase à implémenter au Sprint 1
-    alert("Données prêtes à être sauvegardées (Connexion Supabase requise)");
+    if (!parsedData) return;
+
+    setIsSaving(true);
+    const supabase = createClient();
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (!user) {
+        toast({
+          title: "Authentification requise",
+          description: "Vous devez être connecté pour enregistrer une commande.",
+          variant: "destructive",
+        });
+        setIsSaving(false);
+        return;
+      }
+
+      // 1. Insérer la commande
+      const { data: order, error: orderError } = await supabase
+        .from('orders')
+        .insert({
+          user_id: user.id,
+          external_order_id: parsedData.orderId,
+          buyer_name: parsedData.buyer,
+          buyer_address: parsedData.address,
+          total_price: parsedData.totalValue,
+          shipping_cost: parsedData.shippingCost,
+          status: parsedData.status === 'Payée' ? 'paid' : 'preparing',
+          source: 'email'
+        })
+        .select()
+        .single();
+
+      if (orderError) throw orderError;
+
+      // 2. Insérer les items
+      const itemsToInsert = parsedData.items.map(item => ({
+        order_id: order.id,
+        card_name: item.name,
+        expansion: item.expansion,
+        condition: item.condition,
+        language: item.language,
+        quantity: item.quantity,
+        price: item.price
+      }));
+
+      const { error: itemsError } = await supabase
+        .from('order_items')
+        .insert(itemsToInsert);
+
+      if (itemsError) throw itemsError;
+
+      toast({
+        title: "Commande enregistrée !",
+        description: `La commande ${parsedData.orderId} a été ajoutée avec succès.`,
+      });
+
+      // Reset
+      setParsedData(null);
+      setEmailText("");
+
+    } catch (error: any) {
+      toast({
+        title: "Erreur lors de l'enregistrement",
+        description: error.message || "Une erreur est survenue.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -136,8 +215,13 @@ export default function ImportPage() {
              <Button variant="outline" onClick={() => setParsedData(null)}>
               Annuler
             </Button>
-            <Button onClick={handleSave} className="bg-green-600 hover:bg-green-700">
-              <CheckCircle2 className="mr-2 h-4 w-4" /> Enregistrer la commande
+            <Button onClick={handleSave} className="bg-green-600 hover:bg-green-700" disabled={isSaving}>
+              {isSaving ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <CheckCircle2 className="mr-2 h-4 w-4" />
+              )}
+              {isSaving ? "Enregistrement..." : "Enregistrer la commande"}
             </Button>
           </div>
         </div>

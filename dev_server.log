@@ -11,3 +11,25 @@
  ✓ Compiled /import in 4.4s (538 modules)
  GET /import 200 in 4927ms
  ✓ Compiled in 564ms (260 modules)
+ ✓ Compiled in 3.9s (260 modules)
+ ✓ Compiled in 4.2s (642 modules)
+ ✓ Compiled in 478ms (644 modules)
+ ✓ Compiled in 1324ms (692 modules)
+ ✓ Compiled in 223ms (678 modules)
+ ⨯ ./app/import/page.tsx
+Error:
+  [31mx[0m Expected '}', got '<eof>'
+     ,-[[36;1;4m/app/app/import/page.tsx[0m:242:1]
+ [2m242[0m |       )}
+ [2m243[0m |     </div>
+ [2m244[0m |   );
+ [2m245[0m | }
+     : [31;1m^[0m
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./app/import/page.tsx
+ ✓ Compiled in 728ms (678 modules)
