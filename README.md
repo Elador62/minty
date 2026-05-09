@@ -1,36 +1,46 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Minty - CardMarket Sales Manager
 
-## Getting Started
+Minty est un outil de gestion centralisé pour automatiser le suivi des ventes, la préparation des commandes et l'ajustement des prix CardMarket (Pokémon & Magic).
 
-First, run the development server:
+## 🚀 Installation locale
 
+Suivez ces étapes pour faire tourner l'application sur votre machine :
+
+### 1. Prérequis
+- Node.js (version 18 ou supérieure recommandée)
+- Un compte [Supabase](https://supabase.com/) (gratuit)
+
+### 2. Installation des dépendances
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 3. Configuration de l'environnement
+Copiez le fichier `.env.example` en `.env.local` :
+```bash
+cp .env.example .env.local
+```
+Remplissez les variables `NEXT_PUBLIC_SUPABASE_URL` et `NEXT_PUBLIC_SUPABASE_ANON_KEY` avec vos identifiants disponibles dans les paramètres de votre projet Supabase (API settings).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 4. Base de données
+Exécutez le script SQL situé dans `supabase/migrations/20240509_initial_schema.sql` dans l'éditeur SQL de votre tableau de bord Supabase pour créer les tables nécessaires.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 5. Lancement
+```bash
+npm run dev
+```
+L'application sera disponible sur [http://localhost:3000](http://localhost:3000).
 
-## Learn More
+## 📦 Sprint 1 : Module d'Importation
+La fonctionnalité actuelle permet d'importer des commandes via le parser d'emails.
+Rendez-vous sur : [http://localhost:3000/import](http://localhost:3000/import)
 
-To learn more about Next.js, take a look at the following resources:
+1. Copiez le contenu d'un email CardMarket (Payé, Vendu, ou Livré).
+2. Collez-le dans la zone de texte.
+3. Cliquez sur **Analyser l'email** pour voir le résultat.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 🛠 Stack Technique
+- **Framework :** Next.js 14 (App Router)
+- **Style :** Tailwind CSS + Shadcn UI
+- **Base de données :** Supabase (PostgreSQL + RLS)
+- **Icônes :** Lucide React
