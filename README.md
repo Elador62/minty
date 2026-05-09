@@ -50,7 +50,9 @@ Optimisez la préparation de vos colis.
 - **Picking List :** Générez une liste de préparation prête à imprimer.
 - **Identification Visuelle :** Miniatures automatiques des cartes (via APIs Scryfall & PokémonTCG).
 - **Sécurité Trust Service :** Alerte rouge clignotante et contrôle manuel.
-- **Impression Optimisée :** Mise en page picking-list (1 page/commande) avec cases à cocher.
+- **Impression Optimisée :** Mise en page picking-list (1 page/commande) allégée (sans photos) avec lignes compactes.
+- **Persistence du Picking :** Chaque carte cochée est sauvegardée en temps réel.
+- **Vérification Visuelle :** En-tête vert dès qu'une commande est entièrement préparée.
 
 ## 🛠 Stack Technique
 - **Framework :** Next.js 14 (App Router)

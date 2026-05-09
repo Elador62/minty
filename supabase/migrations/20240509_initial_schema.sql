@@ -35,6 +35,7 @@ CREATE TABLE IF NOT EXISTS order_items (
   quantity INTEGER DEFAULT 1,
   price DECIMAL(10, 2),
   image_url TEXT,
+  is_picked BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
@@ -110,5 +111,9 @@ BEGIN
 
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='orders' AND column_name='shipping_cost') THEN
         ALTER TABLE orders ADD COLUMN shipping_cost DECIMAL(10, 2);
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='order_items' AND column_name='is_picked') THEN
+        ALTER TABLE order_items ADD COLUMN is_picked BOOLEAN DEFAULT FALSE;
     END IF;
 END $$;
