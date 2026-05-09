@@ -7,30 +7,65 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, CheckCircle2, Import, Loader2 } from "lucide-react";
+import { AlertCircle, CheckCircle2, Import, Loader2, AlertTriangle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { getCardThumbnail } from "@/lib/cardmarket/images";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+
+const STATUS_RANK: Record<string, number> = {
+  'À payer': 1,
+  'paid': 2,
+  'Payée': 2,
+  'preparing': 3,
+  'shipped': 4,
+  'Arrivée': 5,
+  'completed': 5
+};
 
 export default function ImportPage() {
   const [emailText, setEmailText] = useState("");
   const [parsedData, setParsedData] = useState<ParsedOrder | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [existingOrder, setExistingOrder] = useState<any>(null);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
   const { toast } = useToast();
 
-  const handleParse = () => {
+  const handleParse = async () => {
     const result = parseCardMarketEmail(emailText);
-    setParsedData(result);
     if (!result) {
       toast({
         title: "Erreur d'analyse",
         description: "Le format de l'email n'a pas été reconnu.",
         variant: "destructive",
       });
+      return;
+    }
+
+    setParsedData(result);
+
+    // Vérifier si la commande existe déjà
+    const supabase = createClient();
+    const { data } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('external_order_id', result.orderId)
+      .single();
+
+    if (data) {
+      setExistingOrder(data);
+      setShowConfirmModal(true);
     }
   };
 
-  const handleSave = async () => {
+  const executeSave = async (isUpdate = false) => {
     if (!parsedData) return;
 
     setIsSaving(true);
@@ -41,39 +76,61 @@ export default function ImportPage() {
       if (!user) {
         toast({
           title: "Authentification requise",
-          description: "Vous devez être connecté pour enregistrer une commande.",
+          description: "Vous devez être connecté.",
           variant: "destructive",
         });
         setIsSaving(false);
         return;
       }
 
-      // 1. Insérer la commande
-      const { data: order, error: orderError } = await supabase
-        .from('orders')
-        .insert({
-          user_id: user.id,
-          external_order_id: parsedData.orderId,
-          buyer_name: parsedData.buyer,
-          buyer_address: parsedData.address,
-          total_price: parsedData.totalValue,
-          shipping_cost: parsedData.shippingCost,
-          status: parsedData.status === 'Payée' ? 'paid' : 'preparing',
-          source: 'email'
-        })
-        .select()
-        .single();
+      const statusMap: Record<string, string> = {
+        'Payée': 'paid',
+        'À payer': 'paid',
+        'Arrivée': 'completed'
+      };
 
-      if (orderError) throw orderError;
+      const orderData = {
+        user_id: user.id,
+        external_order_id: parsedData.orderId,
+        buyer_name: parsedData.buyer,
+        buyer_address: parsedData.address,
+        total_price: parsedData.totalValue,
+        shipping_cost: parsedData.shippingCost,
+        status: statusMap[parsedData.status] || 'preparing',
+        source: 'email'
+      };
 
-      // 2. Insérer les items avec récupération d'image
+      let orderId = "";
+
+      if (isUpdate && existingOrder) {
+        const { error: updateError } = await supabase
+          .from('orders')
+          .update(orderData)
+          .eq('id', existingOrder.id);
+
+        if (updateError) throw updateError;
+        orderId = existingOrder.id;
+
+        // Supprimer les anciens items pour les recréer (plus simple que de matcher)
+        await supabase.from('order_items').delete().eq('order_id', orderId);
+      } else {
+        const { data: order, error: orderError } = await supabase
+          .from('orders')
+          .insert(orderData)
+          .select()
+          .single();
+
+        if (orderError) throw orderError;
+        orderId = order.id;
+      }
+
+      // Items
       const itemsToInsert = await Promise.all(parsedData.items.map(async (item) => {
         const game = item.expansion.toLowerCase().includes('magic') || item.details === 'R' ? 'magic' : 'pokemon';
-        // Note: Cette détection est simplifiée pour le Sprint 3
         const imageUrl = await getCardThumbnail(item.name, game);
 
         return {
-          order_id: order.id,
+          order_id: orderId,
           card_name: item.name,
           expansion: item.expansion,
           game,
@@ -92,24 +149,52 @@ export default function ImportPage() {
       if (itemsError) throw itemsError;
 
       toast({
-        title: "Commande enregistrée !",
-        description: `La commande ${parsedData.orderId} a été ajoutée avec succès.`,
+        title: isUpdate ? "Commande mise à jour !" : "Commande enregistrée !",
+        description: `La commande ${parsedData.orderId} est prête.`,
       });
 
-      // Reset
       setParsedData(null);
       setEmailText("");
+      setExistingOrder(null);
+      setShowConfirmModal(false);
 
     } catch (error: any) {
       toast({
-        title: "Erreur lors de l'enregistrement",
-        description: error.message || "Une erreur est survenue.",
+        title: "Erreur",
+        description: error.message,
         variant: "destructive",
       });
     } finally {
       setIsSaving(false);
     }
   };
+
+  const getStatusAlert = () => {
+    if (!existingOrder || !parsedData) return null;
+    const rankOld = STATUS_RANK[existingOrder.status] || 0;
+    const rankNew = STATUS_RANK[parsedData.status] || 0;
+
+    if (rankNew > rankOld) {
+      return {
+        title: "Mise à jour d'état",
+        desc: `La commande va passer de "${existingOrder.status}" à "${parsedData.status}". Confirmer ?`,
+        variant: "info"
+      };
+    } else if (rankNew < rankOld) {
+      return {
+        title: "Attention : Retour en arrière",
+        desc: `Le nouvel import a un état "${parsedData.status}" moins avancé que l'existant ("${existingOrder.status}"). Voulez-vous vraiment écraser ?`,
+        variant: "warning"
+      };
+    }
+    return {
+      title: "Commande déjà existante",
+      desc: "Cette commande est déjà enregistrée avec le même état. Voulez-vous la mettre à jour ?",
+      variant: "info"
+    };
+  };
+
+  const alertInfo = getStatusAlert();
 
   return (
     <div className="container mx-auto py-10 space-y-8">
@@ -155,9 +240,9 @@ export default function ImportPage() {
             </Card>
             <Card>
               <CardHeader className="pb-2">
-                <CardDescription>Statut</CardDescription>
+                <CardDescription>Statut détecté</CardDescription>
                 <CardTitle className="text-xl">
-                  <Badge variant={parsedData.status === "Payée" ? "default" : "secondary"}>
+                  <Badge variant="secondary">
                     {parsedData.status}
                   </Badge>
                 </CardTitle>
@@ -207,43 +292,35 @@ export default function ImportPage() {
             </CardContent>
           </Card>
 
-          {parsedData.address && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Adresse de livraison</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <pre className="whitespace-pre-wrap font-sans text-sm p-4 bg-muted rounded-md">
-                  {parsedData.address}
-                </pre>
-              </CardContent>
-            </Card>
-          )}
-
           <div className="flex justify-end gap-4">
-             <Button variant="outline" onClick={() => setParsedData(null)}>
-              Annuler
-            </Button>
-            <Button onClick={handleSave} className="bg-green-600 hover:bg-green-700" disabled={isSaving}>
-              {isSaving ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <CheckCircle2 className="mr-2 h-4 w-4" />
-              )}
-              {isSaving ? "Enregistrement..." : "Enregistrer la commande"}
+            <Button variant="outline" onClick={() => setParsedData(null)}>Annuler</Button>
+            <Button onClick={() => existingOrder ? setShowConfirmModal(true) : executeSave()} className="bg-green-600 hover:bg-green-700" disabled={isSaving}>
+              {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
+              {existingOrder ? "Mettre à jour" : "Enregistrer"}
             </Button>
           </div>
         </div>
       )}
 
-      {!parsedData && emailText && (
-        <div className="flex items-center justify-center p-8 text-muted-foreground border-2 border-dashed rounded-lg">
-           <div className="text-center">
-             <AlertCircle className="mx-auto h-12 w-12 opacity-20 mb-2" />
-             <p>L'analyse n'a pas encore été lancée ou le format est invalide.</p>
-           </div>
-        </div>
-      )}
+      <Dialog open={showConfirmModal} onOpenChange={setShowConfirmModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {alertInfo?.variant === 'warning' ? <AlertTriangle className="text-yellow-500" /> : <AlertCircle className="text-blue-500" />}
+              {alertInfo?.title}
+            </DialogTitle>
+            <DialogDescription className="py-4">
+              {alertInfo?.desc}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowConfirmModal(false)}>Annuler</Button>
+            <Button onClick={() => executeSave(true)} disabled={isSaving}>
+              {isSaving ? "Action en cours..." : "Confirmer la mise à jour"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

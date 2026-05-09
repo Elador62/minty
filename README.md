@@ -42,13 +42,15 @@ Rendez-vous sur : `/import`
 ## 📊 Sprint 2 : Dashboard & Kanban
 Suivez votre activité en temps réel.
 - **Dashboard :** Visualisez votre CA total, la répartition Pokémon/Magic et vos meilleures ventes.
-- **Kanban :** Gérez le cycle de vie de vos commandes (À Préparer -> En cours -> Expédié -> Terminé) par simple clic.
+- **Kanban :** Gérez le cycle de vie de vos commandes (Déplacement libre, modification manuelle, expand/collapse des articles).
+- **Gestion Manuelle :** Créez ou modifiez vos commandes et articles via une interface dédiée.
 
 ## 🚢 Sprint 3 : Expédition & Visuels
 Optimisez la préparation de vos colis.
 - **Picking List :** Générez une liste de préparation prête à imprimer.
 - **Identification Visuelle :** Miniatures automatiques des cartes (via APIs Scryfall & PokémonTCG).
-- **Sécurité Trust Service :** Alerte rouge clignotante pour les commandes "Tiers de Confiance" afin d'éviter les erreurs d'affranchissement.
+- **Sécurité Trust Service :** Alerte rouge clignotante et contrôle manuel.
+- **Impression Optimisée :** Mise en page picking-list (1 page/commande) avec cases à cocher.
 
 ## 🛠 Stack Technique
 - **Framework :** Next.js 14 (App Router)

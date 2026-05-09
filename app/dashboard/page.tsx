@@ -4,11 +4,12 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { TrendingUp, Package, ShoppingCart, Star } from "lucide-react";
+import { TrendingUp, Package, ShoppingCart, Star, Wallet } from "lucide-react";
 
 export default function DashboardPage() {
   const [stats, setStats] = useState({
     totalCA: 0,
+    grossCA: 0, // Hors frais de port
     totalOrders: 0,
     pokemonSales: 0,
     magicSales: 0,
@@ -25,9 +26,11 @@ export default function DashboardPage() {
       // 1. Total CA et Commandes
       const { data: orders } = await supabase
         .from('orders')
-        .select('total_price, status');
+        .select('total_price, shipping_cost, status');
 
       const totalCA = orders?.reduce((acc: number, o: any) => acc + Number(o.total_price), 0) || 0;
+      const totalShipping = orders?.reduce((acc: number, o: any) => acc + Number(o.shipping_cost || 0), 0) || 0;
+      const grossCA = totalCA - totalShipping;
       const totalOrders = orders?.length || 0;
 
       // 2. Répartition Pokémon vs Magic
@@ -54,7 +57,7 @@ export default function DashboardPage() {
         .sort((a, b) => b.count - a.count)
         .slice(0, 5);
 
-      setStats({ totalCA, totalOrders, pokemonSales, magicSales, topCards });
+      setStats({ totalCA, grossCA, totalOrders, pokemonSales, magicSales, topCards });
       setIsLoading(false);
     }
 
@@ -62,21 +65,35 @@ export default function DashboardPage() {
   }, []);
 
   if (isLoading) {
-    return <div className="container mx-auto py-10">Chargement du dashboard...</div>;
+    return <div className="container mx-auto py-10 text-center">Chargement du dashboard...</div>;
   }
 
   return (
     <div className="container mx-auto py-10 space-y-8">
-      <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+      <div className="flex justify-between items-end">
+        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+        <p className="text-sm text-muted-foreground">Données synchronisées en temps réel</p>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card className="border-l-4 border-l-green-500">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Chiffre d'Affaires Brut</CardTitle>
+            <Wallet className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.grossCA.toFixed(2)} €</div>
+            <p className="text-xs text-muted-foreground mt-1">Hors frais de port</p>
+          </CardContent>
+        </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Chiffre d'Affaires</CardTitle>
+            <CardTitle className="text-sm font-medium">CA Total (TTC)</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalCA.toFixed(2)} €</div>
+            <p className="text-xs text-muted-foreground mt-1">Incluant les frais d'envoi</p>
           </CardContent>
         </Card>
         <Card>
@@ -90,20 +107,18 @@ export default function DashboardPage() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Ventes Pokémon</CardTitle>
-            <Package className="h-4 w-4 text-blue-500" />
+            <CardTitle className="text-sm font-medium">Répartition Jeux</CardTitle>
+            <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.pokemonSales.toFixed(2)} €</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Ventes Magic</CardTitle>
-            <Package className="h-4 w-4 text-red-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.magicSales.toFixed(2)} €</div>
+          <CardContent className="space-y-1">
+            <div className="flex justify-between text-sm">
+              <span className="text-blue-600 font-medium">Pokémon</span>
+              <span className="font-bold">{stats.pokemonSales.toFixed(2)}€</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-red-600 font-medium">Magic</span>
+              <span className="font-bold">{stats.magicSales.toFixed(2)}€</span>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -143,8 +158,9 @@ export default function DashboardPage() {
         </Card>
 
         <Card className="flex items-center justify-center bg-slate-50 border-dashed">
-          <CardContent className="text-muted-foreground text-sm">
-            Graphiques de rentabilité (Sprint 4)
+          <CardContent className="text-muted-foreground text-sm text-center p-12">
+            <p className="font-bold mb-2">Suivi de Collection & Rentabilité</p>
+            Graphiques et alertes prix du marché (+10%) prévus au Sprint 4.
           </CardContent>
         </Card>
       </div>
