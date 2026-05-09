@@ -33,3 +33,13 @@ Caused by:
 Import trace for requested module:
 ./app/import/page.tsx
  ✓ Compiled in 728ms (678 modules)
+ ✓ Compiled in 4.6s (346 modules)
+ ✓ Compiled in 971ms (678 modules)
+ ✓ Compiled in 535ms (678 modules)
+ ✓ Compiled in 403ms (346 modules)
+ ✓ Compiled in 368ms (678 modules)
+ ✓ Compiled in 243ms (346 modules)
+ ✓ Compiled in 248ms (346 modules)
+ ✓ Compiled in 6s (731 modules)
+ ✓ Compiled in 741ms (731 modules)
+ ✓ Compiled in 463ms (745 modules)
