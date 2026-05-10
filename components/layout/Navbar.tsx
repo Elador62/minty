@@ -56,8 +56,8 @@ export function Navbar() {
               <Link href="/shipping" className="text-sm font-medium hover:text-primary transition-colors">
                 Expédition
               </Link>
-              <Link href="/inventory" className="text-sm font-medium hover:text-primary transition-colors">
-                Suivi Prix
+              <Link href="/collection" className="text-sm font-medium hover:text-primary transition-colors">
+                Collection
               </Link>
               <Link href="/parametres" className="text-sm font-medium hover:text-primary transition-colors">
                 Paramètres

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { TrendingUp, Package, ShoppingCart, Star, Wallet, ArrowUpRight, AlertCircle, BarChart3, CheckCircle2 } from "lucide-react";
+import { TrendingUp, Package, ShoppingCart, Star, Wallet, ArrowUpRight, AlertCircle, BarChart3, CheckCircle2, Box, Layers, Palette, Tags } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 export default function DashboardPage() {
@@ -18,6 +18,13 @@ export default function DashboardPage() {
     collectionValue: 0,
     valueIncrease: 0,
     alerts: [] as any[],
+    collectionCount: 0,
+    pokemonCount: 0,
+    magicCount: 0,
+    storageStats: [] as any[],
+    editionStats: [] as any[],
+    colorStats: [] as any[],
+    typeStats: [] as any[],
   });
   const [isLoading, setIsLoading] = useState(true);
   const [settings, setSettings] = useState<any>(null);
@@ -45,7 +52,7 @@ export default function DashboardPage() {
       const grossCA = totalCA - totalShipping;
       const totalOrders = orders?.length || 0;
 
-      // 2. Répartition Pokémon vs Magic
+      // 2. Répartition Pokémon vs Magic (Ventes)
       const { data: items } = await supabase
         .from('order_items')
         .select('price, game, card_name, quantity');
@@ -69,30 +76,52 @@ export default function DashboardPage() {
         .sort((a, b) => b.count - a.count)
         .slice(0, 5);
 
-      // 3. Suivi Collection (Simulation basée sur inventory_items)
+      // 3. Suivi Collection (Basé sur inventory_items)
       const { data: inventory } = await supabase
         .from('inventory_items')
         .select('*');
 
-      const collectionValue = inventory?.reduce((acc: number, item: any) => acc + Number(item.last_market_price || 0), 0) || 0;
-      const listedValue = inventory?.reduce((acc: number, item: any) => acc + Number(item.listed_price || 0), 0) || 0;
-      const valueIncrease = collectionValue > 0 ? ((collectionValue - listedValue) / listedValue) * 100 : 0;
+      const collectionValue = inventory?.reduce((acc: number, item: any) => acc + (Number(item.last_market_price || 0) * (item.quantity || 1)), 0) || 0;
+      const listedValue = inventory?.reduce((acc: number, item: any) => acc + (Number(item.listed_price || 0) * (item.quantity || 1)), 0) || 0;
+      const valueIncrease = listedValue > 0 ? ((collectionValue - listedValue) / listedValue) * 100 : 0;
+      const collectionCount = inventory?.reduce((acc: number, item: any) => acc + (item.quantity || 1), 0) || 0;
+
+      let pokemonCount = 0;
+      let magicCount = 0;
+      const storageMap: Record<string, number> = {};
+      const editionMap: Record<string, number> = {};
+      const colorMap: Record<string, number> = {};
+      const typeMap: Record<string, number> = {};
+
+      inventory?.forEach((item: any) => {
+        const qty = item.quantity || 1;
+        if (item.game === 'pokemon') pokemonCount += qty;
+        else if (item.game === 'magic') magicCount += qty;
+
+        const storage = item.storage_location || 'Non rangé';
+        storageMap[storage] = (storageMap[storage] || 0) + qty;
+
+        const edition = item.expansion || 'Inconnu';
+        editionMap[edition] = (editionMap[edition] || 0) + qty;
+
+        const color = item.color || 'Incolore / N/A';
+        colorMap[color] = (colorMap[color] || 0) + qty;
+
+        const type = item.card_type || 'Inconnu';
+        typeMap[type] = (typeMap[type] || 0) + qty;
+      });
 
       const alerts = inventory?.filter((item: any) => {
-        const diff = ((Number(item.last_market_price) - Number(item.listed_price)) / Number(item.listed_price)) * 100;
-
-        // Simulation d'une augmentation "récente" basée sur la période paramétrable
-        // On vérifie la date de création de l'item d'inventaire
+        const diff = item.listed_price > 0 ? ((Number(item.last_market_price) - Number(item.listed_price)) / Number(item.listed_price)) * 100 : 0;
         const itemDate = new Date(item.created_at);
         const now = new Date();
         const diffDays = (now.getTime() - itemDate.getTime()) / (1000 * 3600 * 24);
-
         return diff >= threshold && diffDays <= periodDays;
       }).map((item: any) => ({
         name: item.card_name,
         listed: Number(item.listed_price),
         market: Number(item.last_market_price),
-        diff: ((Number(item.last_market_price) - Number(item.listed_price)) / Number(item.listed_price)) * 100,
+        diff: item.listed_price > 0 ? ((Number(item.last_market_price) - Number(item.listed_price)) / Number(item.listed_price)) * 100 : 0,
         date: new Date(item.created_at).toLocaleDateString()
       })) || [];
 
@@ -105,7 +134,14 @@ export default function DashboardPage() {
         topCards,
         collectionValue,
         valueIncrease,
-        alerts
+        alerts,
+        collectionCount,
+        pokemonCount,
+        magicCount,
+        storageStats: Object.entries(storageMap).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count).slice(0, 5),
+        editionStats: Object.entries(editionMap).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count).slice(0, 5),
+        colorStats: Object.entries(colorMap).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count),
+        typeStats: Object.entries(typeMap).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count).slice(0, 5),
       });
       setIsLoading(false);
     }
@@ -130,75 +166,71 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card className="border-l-4 border-l-green-500">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Chiffre d'Affaires Brut</CardTitle>
+            <CardTitle className="text-sm font-medium">CA Brut</CardTitle>
             <Wallet className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.grossCA.toFixed(2)} €</div>
-            <p className="text-xs text-muted-foreground mt-1">Ventes nettes hors frais de port</p>
+            <p className="text-xs text-muted-foreground mt-1">Ventes nettes (hors port)</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">CA Total (TTC)</CardTitle>
+            <CardTitle className="text-sm font-medium">Ventes Pokémon/Magic</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalCA.toFixed(2)} €</div>
-            <p className="text-xs text-muted-foreground mt-1">Incluant les frais d'envoi</p>
+          <CardContent className="space-y-1">
+            <div className="flex justify-between text-xs">
+              <span className="text-blue-600">PKM</span>
+              <span className="font-bold">{stats.pokemonSales.toFixed(0)}€</span>
+            </div>
+            <div className="flex justify-between text-xs">
+              <span className="text-red-600">MTG</span>
+              <span className="font-bold">{stats.magicSales.toFixed(0)}€</span>
+            </div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Commandes Totales</CardTitle>
-            <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Collection Totale</CardTitle>
+            <Layers className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalOrders}</div>
-            <p className="text-xs text-muted-foreground mt-1">Volumes de transactions</p>
+            <div className="text-2xl font-bold">{stats.collectionCount}</div>
+            <p className="text-xs text-muted-foreground mt-1">Nombre total de cartes</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Répartition Jeux</CardTitle>
+            <CardTitle className="text-sm font-medium">Répartition TCG</CardTitle>
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent className="space-y-1">
             <div className="flex justify-between text-sm">
               <span className="text-blue-600 font-medium">Pokémon</span>
-              <span className="font-bold">{stats.pokemonSales.toFixed(2)}€</span>
+              <span className="font-bold">{stats.pokemonCount}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-red-600 font-medium">Magic</span>
-              <span className="font-bold">{stats.magicSales.toFixed(2)}€</span>
+              <span className="font-bold">{stats.magicCount}</span>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* NOUVELLE SECTION : RENTABILITE & COLLECTION */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <Card className="lg:col-span-1">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <BarChart3 className="h-5 w-5 text-primary" /> Valeur Collection
             </CardTitle>
-            <CardDescription>Estimation basée sur les prix du marché</CardDescription>
+            <CardDescription>Estimation prix marché x quantité</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col items-center justify-center py-6">
             <div className="text-4xl font-black text-primary">{stats.collectionValue.toFixed(2)} €</div>
             <div className={`flex items-center mt-2 font-bold ${stats.valueIncrease >= 0 ? 'text-green-600' : 'text-red-600'}`}>
               {stats.valueIncrease >= 0 ? <ArrowUpRight className="h-4 w-4 mr-1" /> : <TrendingUp className="h-4 w-4 mr-1 rotate-180" />}
               {stats.valueIncrease.toFixed(1)}% vs. Prix Listé
-            </div>
-            <div className="mt-8 w-full space-y-3">
-              <div className="flex justify-between text-xs">
-                <span>Optimisation de marge</span>
-                <span className="font-bold text-green-600">Forte</span>
-              </div>
-              <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-                <div className="h-full bg-green-500" style={{ width: '75%' }}></div>
-              </div>
             </div>
           </CardContent>
         </Card>
@@ -218,7 +250,6 @@ export default function DashboardPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Carte</TableHead>
-                    <TableHead>Date détection</TableHead>
                     <TableHead className="text-right">Votre Prix</TableHead>
                     <TableHead className="text-right">Marché</TableHead>
                     <TableHead className="text-right">Hausse</TableHead>
@@ -228,7 +259,6 @@ export default function DashboardPage() {
                   {stats.alerts.map((alert, i) => (
                     <TableRow key={i}>
                       <TableCell className="font-medium">{alert.name}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{alert.date}</TableCell>
                       <TableCell className="text-right">{alert.listed.toFixed(2)}€</TableCell>
                       <TableCell className="text-right font-bold text-green-600">{alert.market.toFixed(2)}€</TableCell>
                       <TableCell className="text-right">
@@ -244,6 +274,69 @@ export default function DashboardPage() {
                 <p>Aucune alerte de prix pour le moment.</p>
               </div>
             )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+               <Box className="h-4 w-4" /> Top Stockages
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+             {stats.storageStats.map((s, i) => (
+               <div key={i} className="flex justify-between text-xs border-b border-slate-50 pb-1">
+                 <span className="truncate max-w-[120px]">{s.name}</span>
+                 <span className="font-bold">{s.count}</span>
+               </div>
+             ))}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+               <Tags className="h-4 w-4" /> Top Éditions
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+             {stats.editionStats.map((s, i) => (
+               <div key={i} className="flex justify-between text-xs border-b border-slate-50 pb-1">
+                 <span className="truncate max-w-[120px]">{s.name}</span>
+                 <span className="font-bold">{s.count}</span>
+               </div>
+             ))}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+               <Palette className="h-4 w-4" /> Couleurs
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+             {stats.colorStats.map((s, i) => (
+               <div key={i} className="flex justify-between text-xs border-b border-slate-50 pb-1">
+                 <span className="truncate max-w-[120px]">{s.name}</span>
+                 <span className="font-bold">{s.count}</span>
+               </div>
+             ))}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+               <Layers className="h-4 w-4" /> Top Types
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+             {stats.typeStats.map((s, i) => (
+               <div key={i} className="flex justify-between text-xs border-b border-slate-50 pb-1">
+                 <span className="truncate max-w-[120px]">{s.name}</span>
+                 <span className="font-bold">{s.count}</span>
+               </div>
+             ))}
           </CardContent>
         </Card>
       </div>
@@ -270,13 +363,6 @@ export default function DashboardPage() {
                     <TableCell className="text-right font-bold">{card.count}</TableCell>
                   </TableRow>
                 ))}
-                {stats.topCards.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={2} className="text-center text-muted-foreground py-4">
-                      Aucune vente enregistrée
-                    </TableCell>
-                  </TableRow>
-                )}
               </TableBody>
             </Table>
           </CardContent>
@@ -292,8 +378,8 @@ export default function DashboardPage() {
             </p>
             <div className="bg-white/10 p-4 rounded-lg border border-white/10">
               <p className="text-xs font-bold uppercase text-slate-400 mb-1">Potentiel de profit</p>
-              <p className="text-xl font-bold">+124.50 €</p>
-              <p className="text-[10px] text-slate-500">Si vous alignez vos 12 alertes sur le prix marché</p>
+              <p className="text-xl font-bold">+{(stats.collectionValue - (stats.collectionValue / (1 + stats.valueIncrease/100))).toFixed(2)} €</p>
+              <p className="text-[10px] text-slate-500">Si vous alignez vos prix sur le marché</p>
             </div>
           </CardContent>
           <div className="absolute -bottom-10 -right-10 opacity-10">

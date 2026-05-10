@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Printer, Search, CheckCircle2, ChevronDown, ChevronRight } from "lucide-react";
+import { Printer, Search, CheckCircle2, ChevronDown, ChevronRight, AlertCircle, Box } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -16,18 +16,22 @@ import {
 
 export default function ShippingPage() {
   const [orders, setOrders] = useState<any[]>([]);
+  const [inventory, setInventory] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [zoomedImage, setZoomedImage] = useState<{ url: string, name: string } | null>(null);
   const [collapsedOrders, setCollapsedOrders] = useState<Record<string, boolean>>({});
   const supabase = createClient();
 
   const fetchShippingOrders = async () => {
-    const { data } = await supabase
+    const { data: ordersData } = await supabase
       .from('orders')
       .select('*, order_items(*)')
       .in('status', ['paid', 'ready', 'preparing']);
 
-    setOrders(data || []);
+    const { data: invData } = await supabase.from('inventory_items').select('card_name, expansion, quantity, storage_location');
+
+    setOrders(ordersData || []);
+    setInventory(invData || []);
     setIsLoading(false);
   };
 
@@ -168,10 +172,30 @@ export default function ShippingPage() {
 
                             <div className="flex-1">
                               <div className="flex justify-between items-start">
-                                <p className="font-black text-xl leading-tight print:text-sm">
-                                  <span className="text-slate-400 mr-2">1x</span>
-                                  {item.card_name}
-                                </p>
+                                <div className="flex flex-col">
+                                  <p className="font-black text-xl leading-tight print:text-sm">
+                                    <span className="text-slate-400 mr-2">1x</span>
+                                    {item.card_name}
+                                  </p>
+                                  {(() => {
+                                    const inv = inventory.find(i => i.card_name === item.card_name && i.expansion === item.expansion);
+                                    if (!inv || inv.quantity < item.quantity) {
+                                      return (
+                                        <Badge variant="destructive" className="w-fit mt-1 text-[10px] h-5 py-0">
+                                          <AlertCircle className="h-3 w-3 mr-1" /> STOCK INSUFFISANT ({inv?.quantity || 0} dispo)
+                                        </Badge>
+                                      );
+                                    }
+                                    if (inv.storage_location) {
+                                      return (
+                                        <div className="flex items-center gap-1 text-[11px] text-blue-600 font-bold mt-1">
+                                          <Box className="h-3 w-3" /> {inv.storage_location}
+                                        </div>
+                                      );
+                                    }
+                                    return null;
+                                  })()}
+                                </div>
                                 {item.is_picked && <CheckCircle2 className="h-5 w-5 text-green-600 print:hidden" />}
                               </div>
                               <p className="text-sm font-medium mt-1 print:text-[10px]">
