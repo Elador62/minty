@@ -25,7 +25,8 @@ import {
   Filter,
   ArrowUpDown,
   Trash2,
-  AlertTriangle
+  AlertTriangle,
+  AlertCircle
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -73,6 +74,7 @@ const COLUMNS: { id: OrderStatus; label: string; icon: any; color: string }[] = 
 
 export default function SuiviPage() {
   const [orders, setOrders] = useState<Order[]>([]);
+  const [inventory, setInventory] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [expandedOrders, setExpandedOrders] = useState<Record<string, boolean>>({});
   const [editingOrder, setEditingOrder] = useState<any>(null);
@@ -107,21 +109,50 @@ export default function SuiviPage() {
     setOrders(data || []);
   };
 
+  const fetchInventory = async () => {
+    const { data } = await supabase.from('inventory_items').select('card_name, expansion, quantity');
+    setInventory(data || []);
+  };
+
   const fetchSettings = async () => {
     const { data } = await supabase.from('user_settings').select('*').single();
     if (data) setSettings(data);
   };
 
   useEffect(() => {
-    Promise.all([fetchOrders(), fetchSettings()]).then(() => setIsLoading(false));
+    Promise.all([fetchOrders(), fetchInventory(), fetchSettings()]).then(() => setIsLoading(false));
   }, []);
 
   const updateStatus = async (orderId: string, nextStatus: OrderStatus) => {
+    const order = orders.find(o => o.id === orderId);
+
     if (nextStatus === 'ready') {
       await supabase
         .from('order_items')
         .update({ is_picked: true })
         .eq('order_id', orderId);
+    }
+
+    // Décrémentation du stock si passage en 'shipped'
+    if (nextStatus === 'shipped' && order && order.status !== 'shipped') {
+      for (const item of order.order_items || []) {
+        // Recherche d'une carte correspondante dans l'inventaire
+        const { data: inventoryCards } = await supabase
+          .from('inventory_items')
+          .select('id, quantity')
+          .eq('card_name', item.card_name)
+          .eq('expansion', item.expansion)
+          .gt('quantity', 0)
+          .limit(1);
+
+        if (inventoryCards && inventoryCards.length > 0) {
+          const invCard = inventoryCards[0];
+          await supabase
+            .from('inventory_items')
+            .update({ quantity: Math.max(0, invCard.quantity - item.quantity) })
+            .eq('id', invCard.id);
+        }
+      }
     }
 
     const { error } = await supabase
@@ -252,14 +283,25 @@ export default function SuiviPage() {
                     const isOld = ['paid', 'ready', 'preparing'].includes(order.status) && daysSinceCreation > 4;
                     const isUrgent = ['paid', 'ready', 'preparing'].includes(order.status) && daysSinceCreation > 6;
 
+                    const stockAlerts = order.order_items?.filter(item => {
+                      const inv = inventory.find(i => i.card_name === item.card_name && i.expansion === item.expansion);
+                      return !inv || inv.quantity < item.quantity;
+                    }) || [];
+                    const hasStockIssue = stockAlerts.length > 0;
+
                     return (
-                      <Card key={order.id} className={`shadow-sm border-none transition-all ${order.is_trust_service ? 'ring-2 ring-red-500 ring-offset-2' : ''} ${isUrgent ? 'border-2 border-red-500 bg-red-50' : isOld ? 'border-2 border-orange-500 bg-orange-50' : ''}`}>
+                      <Card key={order.id} className={`shadow-sm border-none transition-all ${order.is_trust_service ? 'ring-2 ring-red-500 ring-offset-2' : ''} ${isUrgent ? 'border-2 border-red-500 bg-red-50' : isOld ? 'border-2 border-orange-500 bg-orange-50' : ''} ${hasStockIssue ? 'border-l-4 border-l-red-600' : ''}`}>
                         <CardHeader className="p-4 pb-2">
                           <div className="flex justify-between items-start gap-2">
                             <div className="flex flex-col gap-1">
                               <span className="text-xs font-mono text-muted-foreground">{order.external_order_id}</span>
                               {isUrgent && <Badge className="bg-red-600 text-white text-[8px] h-4 py-0">URGENT</Badge>}
                               {!isUrgent && isOld && <Badge className="bg-orange-500 text-white text-[8px] h-4 py-0">PRIORITÉ</Badge>}
+                              {hasStockIssue && (
+                                <Badge variant="destructive" className="text-[8px] h-4 py-0 flex items-center gap-1">
+                                  <AlertTriangle className="h-2 w-2" /> STOCK
+                                </Badge>
+                              )}
                             </div>
                             <div className="flex items-center gap-1">
                               <span className="text-sm font-bold">{Number(order.total_price).toFixed(2)}€</span>
@@ -325,12 +367,16 @@ export default function SuiviPage() {
 
                           {expandedOrders[order.id] && (
                             <div className="pt-2 border-t text-[11px] space-y-1">
-                              {order.order_items?.map((item, idx) => (
-                                <div key={idx} className="flex justify-between gap-2 border-b border-dashed border-slate-100 pb-1 last:border-0">
-                                  <span className="font-medium truncate">{item.quantity}x {item.card_name}</span>
-                                  <span className="text-muted-foreground shrink-0">{item.condition}</span>
-                                </div>
-                              ))}
+                              {order.order_items?.map((item, idx) => {
+                                const inv = inventory.find(i => i.card_name === item.card_name && i.expansion === item.expansion);
+                                const isMissing = !inv || inv.quantity < item.quantity;
+                                return (
+                                  <div key={idx} className={`flex justify-between gap-2 border-b border-dashed border-slate-100 pb-1 last:border-0 ${isMissing ? 'text-red-600 font-bold' : ''}`}>
+                                    <span className="truncate">{item.quantity}x {item.card_name}</span>
+                                    <span className="text-[9px] shrink-0">{isMissing ? 'HORS STOCK' : item.condition}</span>
+                                  </div>
+                                );
+                              })}
                             </div>
                           )}
                         </CardContent>
