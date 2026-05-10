@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import {
   ArrowRight,
+  RotateCcw,
   Package,
   Truck,
   CheckCircle2,
@@ -80,7 +81,7 @@ export default function SuiviPage() {
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
   const [groupBy, setGroupBy] = useState<'status' | 'year' | 'month' | 'tcg'>('status');
   const [sortBy, setSortBy] = useState<'status' | 'date' | 'price' | 'tcg'>('date');
-  const [filters, setFilters] = useState({
+  const initialFilters = {
     search: '',
     buyer: '',
     cardName: '',
@@ -90,7 +91,8 @@ export default function SuiviPage() {
     maxPrice: '',
     startDate: '',
     endDate: '',
-  });
+  };
+  const [filters, setFilters] = useState(initialFilters);
   const [settings, setSettings] = useState<any>(null);
 
   const supabase = createClient();
@@ -220,7 +222,7 @@ export default function SuiviPage() {
 
   const renderKanban = () => (
     <ScrollArea className="w-full whitespace-nowrap rounded-md border bg-slate-50/50 [direction:rtl]">
-      <div className="[direction:ltr]">
+      <div className="[direction:ltr] pt-4">
         <div className="flex w-max space-x-6 p-6 min-h-[700px]">
           {COLUMNS.map((col) => {
             const colOrders = getFilteredAndSortedOrders(orders.filter(o => o.status === col.id));
@@ -340,7 +342,7 @@ export default function SuiviPage() {
             );
           })}
         </div>
-        <ScrollBar orientation="horizontal" className="mb-2" />
+        <ScrollBar orientation="horizontal" className="mt-[-16px] mb-4 h-3" />
       </div>
     </ScrollArea>
   );
@@ -541,6 +543,10 @@ export default function SuiviPage() {
                <span className="text-muted-foreground">→</span>
                <Input type="date" value={filters.endDate} onChange={(e) => setFilters({...filters, endDate: e.target.value})} className="bg-white w-32 h-8 text-[11px]" />
             </div>
+
+            <Button variant="ghost" size="sm" onClick={() => setFilters(initialFilters)} className="text-muted-foreground hover:text-primary">
+               <RotateCcw className="h-3 w-3 mr-2" /> Réinitialiser
+            </Button>
           </div>
         </CardContent>
       </Card>

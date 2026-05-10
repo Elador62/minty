@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
   RefreshCw,
+  RotateCcw,
   TrendingUp,
   TrendingDown,
   AlertCircle,
@@ -27,12 +28,13 @@ export default function InventoryPage() {
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
   const [sortBy, setSortBy] = useState<'name' | 'price' | 'diff' | 'tcg'>('name');
   const [groupBy, setGroupBy] = useState<'none' | 'tcg' | 'expansion'>('none');
-  const [filters, setFilters] = useState({
+  const initialFilters = {
     search: '',
     tcg: 'all',
     minPrice: '',
     maxPrice: '',
-  });
+  };
+  const [filters, setFilters] = useState(initialFilters);
 
   const supabase = createClient();
   const { toast } = useToast();
@@ -144,7 +146,7 @@ export default function InventoryPage() {
                 <Input placeholder="Max" type="number" value={filters.maxPrice} onChange={(e) => setFilters({...filters, maxPrice: e.target.value})} className="bg-white h-9" />
               </div>
             </div>
-            <div className="flex items-end gap-2">
+            <div className="flex items-end gap-2 pr-4">
                <div className="flex-1 space-y-1">
                   <label className="text-[10px] font-bold uppercase text-muted-foreground">Trier</label>
                   <Select value={sortBy} onValueChange={(v: any) => setSortBy(v)}>
@@ -168,6 +170,9 @@ export default function InventoryPage() {
                     </SelectContent>
                   </Select>
                </div>
+               <Button variant="ghost" size="sm" onClick={() => setFilters(initialFilters)} className="h-9 text-muted-foreground hover:text-primary">
+                  <RotateCcw className="h-4 w-4" />
+               </Button>
             </div>
           </div>
         </CardContent>

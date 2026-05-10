@@ -92,7 +92,7 @@ export default function ShippingPage() {
           const allPicked = order.order_items?.every((it: any) => it.is_picked);
 
           return (
-            <div key={order.id} className="print:page-break-after-always print:min-h-screen print:flex print:flex-col">
+            <div key={order.id} className="print:break-after-page print:block print:w-full">
               <Card className={`overflow-hidden print:shadow-none print:border-none print:rounded-none h-full flex flex-col transition-colors ${allPicked ? 'border-green-500 bg-green-50/30' : ''} ${order.is_trust_service ? 'border-4 border-red-600' : ''}`}>
 
                 {/* ENTETE : Devient Vert si tout est pické */}

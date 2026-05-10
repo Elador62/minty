@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { AlertCircle, CheckCircle2, Import, Loader2, AlertTriangle, FileSpreadsheet, Mail } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -31,6 +32,7 @@ const STATUS_RANK: Record<string, number> = {
 
 export default function ImportPage() {
   const [inputText, setInputText] = useState("");
+  const [manualDate, setManualDate] = useState(new Date().toISOString().split('T')[0]);
   const [importMode, setImportMode] = useState<"email" | "csv">("email");
   const [parsedOrders, setParsedOrders] = useState<any[]>([]);
   const [isSaving, setIsSaving] = useState(false);
@@ -92,7 +94,8 @@ export default function ImportPage() {
           total_price: order.totalValue,
           shipping_cost: order.shippingCost,
           status: 'paid', // Par défaut pour un import
-          source: importMode
+          source: importMode,
+          created_at: importMode === 'csv' ? order.date : manualDate
         };
 
         const existing = existingOrdersMap[order.orderId];
@@ -175,6 +178,17 @@ export default function ImportPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {importMode === 'email' && (
+              <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
+                <label className="text-sm font-bold uppercase text-muted-foreground whitespace-nowrap">Date commande :</label>
+                <Input
+                  type="date"
+                  value={manualDate}
+                  onChange={(e) => setManualDate(e.target.value)}
+                  className="bg-white max-w-[200px]"
+                />
+              </div>
+            )}
             <Textarea
               placeholder={importMode === 'email' ? "Bonjour Nicolas, <buyer> t'a acheté..." : "OrderID;Username;Name;..."}
               className="min-h-[200px] font-mono text-sm"
