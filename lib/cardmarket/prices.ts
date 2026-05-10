@@ -4,8 +4,11 @@ export async function getCardPrice(name: string, game: string, expansion?: strin
 
   try {
     if (game === 'magic') {
+      // 1. Tentative direct fuzzy
       let url = `https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(cleanName)}`;
-      if (expansion) {
+      // Scryfall named API expects a 3-5 character set code, not a full name
+      // If expansion is longer than 5 chars, it's likely a name, so we don't use it in named API
+      if (expansion && expansion.length <= 5) {
         url += `&set=${encodeURIComponent(expansion)}`;
       }
 
@@ -13,16 +16,29 @@ export async function getCardPrice(name: string, game: string, expansion?: strin
       const data = await response.json();
 
       if (data.prices) {
-        // Scryfall fournit eur, eur_foil, usd, usd_foil
         return parseFloat(data.prices.eur || data.prices.eur_foil || data.prices.usd || data.prices.usd_foil) || null;
       }
 
-      // Fallback search
-      const searchResponse = await fetch(`https://api.scryfall.com/cards/search?q=${encodeURIComponent(cleanName)}${expansion ? `+set:${expansion}` : ''}`);
+      // 2. Fallback search plus complet (recherche par nom + set name si présent)
+      const searchQuery = expansion
+        ? `!"${cleanName}" (set:"${expansion}" or e:"${expansion}")`
+        : `!"${cleanName}"`;
+
+      const searchResponse = await fetch(`https://api.scryfall.com/cards/search?q=${encodeURIComponent(searchQuery)}`);
       const searchData = await searchResponse.json();
+
       if (searchData.data?.[0]?.prices) {
         const p = searchData.data[0].prices;
         return parseFloat(p.eur || p.eur_foil || p.usd || p.usd_foil) || null;
+      }
+
+      // 3. Dernier recours fuzzy sans édition
+      if (expansion) {
+        const lastResponse = await fetch(`https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(cleanName)}`);
+        const lastData = await lastResponse.json();
+        if (lastData.prices) {
+          return parseFloat(lastData.prices.eur || lastData.prices.eur_foil || lastData.prices.usd || lastData.prices.usd_foil) || null;
+        }
       }
 
     } else if (game === 'pokemon') {

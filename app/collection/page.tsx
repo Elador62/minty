@@ -234,16 +234,26 @@ export default function CollectionPage() {
   const handleUpdatePrices = async () => {
     setIsRefreshing(true);
     let updatedCount = 0;
+    let totalChecked = 0;
+
+    toast({ title: "Mise à jour lancée", description: `Analyse de ${items.length} cartes...` });
 
     for (const item of items) {
       try {
         const price = await getCardPrice(item.card_name, item.game, item.expansion);
-        if (price && price !== item.last_market_price) {
-          await supabase
+        totalChecked++;
+        if (price !== null) {
+          const { error } = await supabase
             .from('inventory_items')
-            .update({ last_market_price: price })
+            .update({
+              last_market_price: price,
+              updated_at: new Date().toISOString() // On force l'update du timestamp si possible
+            })
             .eq('id', item.id);
-          updatedCount++;
+
+          if (!error && price !== item.last_market_price) {
+            updatedCount++;
+          }
         }
       } catch (err) {
         console.error(`Erreur maj prix pour ${item.card_name}:`, err);
@@ -253,7 +263,7 @@ export default function CollectionPage() {
     setIsRefreshing(false);
     toast({
       title: "Mise à jour terminée",
-      description: `${updatedCount} prix ont été actualisés.`
+      description: `${updatedCount} prix modifiés sur ${totalChecked} cartes vérifiées.`
     });
     fetchInventory();
   };
