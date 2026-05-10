@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Save, Palette, BarChart3, Bell } from "lucide-react";
+import { Save, Palette, BarChart3, Bell, Eye } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 const PRICE_SOURCES = [
   "Trend CardMarket",
@@ -38,7 +39,8 @@ export default function SettingsPage() {
     },
     price_sources: ["Trend CardMarket", "Avg Sell CardMarket"],
     price_alert_threshold: 10,
-    price_alert_period_days: 30
+    price_alert_period_days: 30,
+    card_view_mode: 'modal'
   });
 
   const supabase = createClient();
@@ -83,7 +85,8 @@ export default function SettingsPage() {
         kanban_colors: settings.kanban_colors,
         price_sources: settings.price_sources,
         price_alert_threshold: settings.price_alert_threshold,
-        price_alert_period_days: settings.price_alert_period_days
+        price_alert_period_days: settings.price_alert_period_days,
+        card_view_mode: settings.card_view_mode
       });
 
     if (error) {
@@ -222,6 +225,31 @@ export default function SettingsPage() {
                 Délai pour le calcul de l'évolution des prix.
               </p>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* AFFICHAGE COLLECTION */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Eye className="h-5 w-5" /> Affichage Collection
+            </CardTitle>
+            <CardDescription>Préférences de visualisation des détails d'une carte</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <RadioGroup
+              value={settings.card_view_mode || 'modal'}
+              onValueChange={(v) => setSettings({ ...settings, card_view_mode: v })}
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="modal" id="mode-modal" />
+                <Label htmlFor="mode-modal">Fenêtre modale (Centre)</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="sheet" id="mode-sheet" />
+                <Label htmlFor="mode-sheet">Volet latéral (Droite)</Label>
+              </div>
+            </RadioGroup>
           </CardContent>
         </Card>
       </div>
