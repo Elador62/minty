@@ -38,6 +38,7 @@ import { OrderModal } from "@/components/orders/OrderModal";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -79,6 +80,17 @@ export default function SuiviPage() {
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
   const [groupBy, setGroupBy] = useState<'status' | 'year' | 'month' | 'tcg'>('status');
   const [sortBy, setSortBy] = useState<'status' | 'date' | 'price' | 'tcg'>('date');
+  const [filters, setFilters] = useState({
+    search: '',
+    buyer: '',
+    cardName: '',
+    tcg: 'all',
+    status: 'all',
+    minPrice: '',
+    maxPrice: '',
+    startDate: '',
+    endDate: '',
+  });
   const [settings, setSettings] = useState<any>(null);
 
   const supabase = createClient();
@@ -103,7 +115,6 @@ export default function SuiviPage() {
   }, []);
 
   const updateStatus = async (orderId: string, nextStatus: OrderStatus) => {
-    // Si on passe à "ready", on coche tous les items
     if (nextStatus === 'ready') {
       await supabase
         .from('order_items')
@@ -177,13 +188,27 @@ export default function SuiviPage() {
     setOrderToDelete(null);
   };
 
-  const getSortedOrders = (ordersToSort: Order[]) => {
-    return [...ordersToSort].sort((a, b) => {
+  const getFilteredAndSortedOrders = (ordersToProcess: Order[]) => {
+    let filtered = ordersToProcess.filter(o => {
+      const matchSearch = !filters.search || o.external_order_id.toLowerCase().includes(filters.search.toLowerCase());
+      const matchBuyer = !filters.buyer || o.buyer_name.toLowerCase().includes(filters.buyer.toLowerCase());
+      const matchTCG = filters.tcg === 'all' || o.order_items?.some(it => it.game === filters.tcg);
+      const matchStatus = filters.status === 'all' || o.status === filters.status;
+      const matchPrice = (!filters.minPrice || Number(o.total_price) >= Number(filters.minPrice)) &&
+                         (!filters.maxPrice || Number(o.total_price) <= Number(filters.maxPrice));
+      const matchDate = (!filters.startDate || new Date(o.created_at) >= new Date(filters.startDate)) &&
+                        (!filters.endDate || new Date(o.created_at) <= new Date(filters.endDate));
+      const matchCard = !filters.cardName || o.order_items?.some(it => it.card_name.toLowerCase().includes(filters.cardName.toLowerCase()));
+
+      return matchSearch && matchBuyer && matchTCG && matchStatus && matchPrice && matchDate && matchCard;
+    });
+
+    return [...filtered].sort((a, b) => {
       if (sortBy === 'date') return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       if (sortBy === 'price') return Number(b.total_price) - Number(a.total_price);
       if (sortBy === 'status') {
-        const order = ['paid', 'ready', 'preparing', 'shipped', 'completed'];
-        return order.indexOf(a.status) - order.indexOf(b.status);
+        const orderRank = ['paid', 'ready', 'preparing', 'shipped', 'completed'];
+        return orderRank.indexOf(a.status) - orderRank.indexOf(b.status);
       }
       if (sortBy === 'tcg') {
         const getTCG = (o: Order) => o.order_items?.[0]?.game || '';
@@ -196,126 +221,135 @@ export default function SuiviPage() {
   const renderKanban = () => (
     <ScrollArea className="w-full whitespace-nowrap rounded-md border bg-slate-50/50 [direction:rtl]">
       <div className="[direction:ltr]">
-      <div className="flex w-max space-x-6 p-6 min-h-[700px]">
-        {COLUMNS.map((col) => {
-          const colOrders = getSortedOrders(orders.filter(o => o.status === col.id));
-          const customColor = settings?.kanban_colors?.[col.id];
+        <div className="flex w-max space-x-6 p-6 min-h-[700px]">
+          {COLUMNS.map((col) => {
+            const colOrders = getFilteredAndSortedOrders(orders.filter(o => o.status === col.id));
+            const customColor = settings?.kanban_colors?.[col.id];
 
-          return (
-            <div key={col.id} className="flex flex-col gap-4 w-[320px] shrink-0">
-              <div
-                className="flex items-center justify-between px-3 py-2 rounded-t-lg font-semibold border-b-2"
-                style={{
-                  backgroundColor: customColor || '',
-                  borderColor: customColor ? 'rgba(0,0,0,0.1)' : ''
-                }}
-              >
-                <div className="flex items-center gap-2">
-                  <col.icon className="h-4 w-4" />
-                  <span>{col.label}</span>
+            return (
+              <div key={col.id} className="flex flex-col gap-4 w-[320px] shrink-0">
+                <div
+                  className="flex items-center justify-between px-3 py-2 rounded-t-lg font-semibold border-b-2"
+                  style={{
+                    backgroundColor: customColor || '',
+                    borderColor: customColor ? 'rgba(0,0,0,0.1)' : ''
+                  }}
+                >
+                  <div className="flex items-center gap-2">
+                    <col.icon className="h-4 w-4" />
+                    <span>{col.label}</span>
+                  </div>
+                  <Badge variant="secondary" className="bg-white/80">
+                    {colOrders.length}
+                  </Badge>
                 </div>
-                <Badge variant="secondary" className="bg-white/80">
-                  {colOrders.length}
-                </Badge>
-              </div>
 
-              <div className="flex flex-col gap-3 whitespace-normal">
-                {colOrders.map((order) => (
-                  <Card key={order.id} className={`shadow-sm border-none transition-all ${order.is_trust_service ? 'ring-2 ring-red-500 ring-offset-2' : ''}`}>
-                    <CardHeader className="p-4 pb-2">
-                      <div className="flex justify-between items-start gap-2">
-                        <span className="text-xs font-mono text-muted-foreground">{order.external_order_id}</span>
-                        <div className="flex items-center gap-1">
-                          <span className="text-sm font-bold">{Number(order.total_price).toFixed(2)}€</span>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" className="h-6 w-6 p-0">
-                                <MoreVertical className="h-3 w-3" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                              <DropdownMenuItem onClick={() => handleEdit(order)}>
-                                <Pencil className="mr-2 h-4 w-4" /> Modifier
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => setOrderToDelete(order.id)} className="text-red-600">
-                                <Trash2 className="mr-2 h-4 w-4" /> Supprimer
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuLabel className="text-[10px] uppercase text-muted-foreground">Colonnes</DropdownMenuLabel>
-                              {COLUMNS.map(c => (
-                                <DropdownMenuItem key={c.id} onClick={() => updateStatus(order.id, c.id)}>
-                                  <c.icon className="mr-2 h-4 w-4" /> {c.label}
-                                </DropdownMenuItem>
-                              ))}
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem onClick={() => toggleTrustService(order.id, order.is_trust_service)}>
-                                <ShieldAlert className={`mr-2 h-4 w-4 ${order.is_trust_service ? 'text-red-600' : ''}`} />
-                                {order.is_trust_service ? 'Retirer Trust Service' : 'Marquer Trust Service'}
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-                      </div>
-                      <CardTitle className="text-sm leading-tight">{order.buyer_name}</CardTitle>
-                    </CardHeader>
+                <div className="flex flex-col gap-3 whitespace-normal">
+                  {colOrders.map((order) => {
+                    const daysSinceCreation = (new Date().getTime() - new Date(order.created_at).getTime()) / (1000 * 3600 * 24);
+                    const isOld = ['paid', 'ready', 'preparing'].includes(order.status) && daysSinceCreation > 4;
+                    const isUrgent = ['paid', 'ready', 'preparing'].includes(order.status) && daysSinceCreation > 6;
 
-                    <CardContent className="p-4 pt-0 space-y-3">
-                      <div className="flex justify-between items-center">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 px-2 text-[10px] text-muted-foreground"
-                          onClick={() => toggleExpand(order.id)}
-                        >
-                          {expandedOrders[order.id] ? (
-                            <><ChevronUp className="h-3 w-3 mr-1" /> Masquer items</>
-                          ) : (
-                            <><ChevronDown className="h-3 w-3 mr-1" /> Voir items ({order.order_items?.length})</>
-                          )}
-                        </Button>
-
-                        {col.id !== 'completed' && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-7 text-[10px] hover:bg-slate-100"
-                            onClick={() => moveOrderNext(order.id, order.status)}
-                          >
-                            Suivant <ArrowRight className="ml-1 h-3 w-3" />
-                          </Button>
-                        )}
-                      </div>
-
-                      {expandedOrders[order.id] && (
-                        <div className="pt-2 border-t text-[11px] space-y-1">
-                          {order.order_items?.map((item, idx) => (
-                            <div key={idx} className="flex justify-between gap-2 border-b border-dashed border-slate-100 pb-1 last:border-0">
-                              <span className="font-medium truncate">{item.quantity}x {item.card_name}</span>
-                              <span className="text-muted-foreground shrink-0">{item.condition}</span>
+                    return (
+                      <Card key={order.id} className={`shadow-sm border-none transition-all ${order.is_trust_service ? 'ring-2 ring-red-500 ring-offset-2' : ''} ${isUrgent ? 'border-2 border-red-500 bg-red-50' : isOld ? 'border-2 border-orange-500 bg-orange-50' : ''}`}>
+                        <CardHeader className="p-4 pb-2">
+                          <div className="flex justify-between items-start gap-2">
+                            <div className="flex flex-col gap-1">
+                              <span className="text-xs font-mono text-muted-foreground">{order.external_order_id}</span>
+                              {isUrgent && <Badge className="bg-red-600 text-white text-[8px] h-4 py-0">URGENT</Badge>}
+                              {!isUrgent && isOld && <Badge className="bg-orange-500 text-white text-[8px] h-4 py-0">PRIORITÉ</Badge>}
                             </div>
-                          ))}
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
+                            <div className="flex items-center gap-1">
+                              <span className="text-sm font-bold">{Number(order.total_price).toFixed(2)}€</span>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" className="h-6 w-6 p-0">
+                                    <MoreVertical className="h-3 w-3" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                  <DropdownMenuItem onClick={() => handleEdit(order)}>
+                                    <Pencil className="mr-2 h-4 w-4" /> Modifier
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => setOrderToDelete(order.id)} className="text-red-600">
+                                    <Trash2 className="mr-2 h-4 w-4" /> Supprimer
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuLabel className="text-[10px] uppercase text-muted-foreground">Colonnes</DropdownMenuLabel>
+                                  {COLUMNS.map(c => (
+                                    <DropdownMenuItem key={c.id} onClick={() => updateStatus(order.id, c.id)}>
+                                      <c.icon className="mr-2 h-4 w-4" /> {c.label}
+                                    </DropdownMenuItem>
+                                  ))}
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem onClick={() => toggleTrustService(order.id, order.is_trust_service)}>
+                                    <ShieldAlert className={`mr-2 h-4 w-4 ${order.is_trust_service ? 'text-red-600' : ''}`} />
+                                    {order.is_trust_service ? 'Retirer Trust Service' : 'Marquer Trust Service'}
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                          </div>
+                          <CardTitle className="text-sm leading-tight">{order.buyer_name}</CardTitle>
+                        </CardHeader>
+
+                        <CardContent className="p-4 pt-0 space-y-3">
+                          <div className="flex justify-between items-center">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 px-2 text-[10px] text-muted-foreground"
+                              onClick={() => toggleExpand(order.id)}
+                            >
+                              {expandedOrders[order.id] ? (
+                                <><ChevronUp className="h-3 w-3 mr-1" /> Masquer items</>
+                              ) : (
+                                <><ChevronDown className="h-3 w-3 mr-1" /> Voir items ({order.order_items?.length})</>
+                              )}
+                            </Button>
+
+                            {col.id !== 'completed' && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-7 text-[10px] hover:bg-slate-100"
+                                onClick={() => moveOrderNext(order.id, order.status)}
+                              >
+                                Suivant <ArrowRight className="ml-1 h-3 w-3" />
+                              </Button>
+                            )}
+                          </div>
+
+                          {expandedOrders[order.id] && (
+                            <div className="pt-2 border-t text-[11px] space-y-1">
+                              {order.order_items?.map((item, idx) => (
+                                <div key={idx} className="flex justify-between gap-2 border-b border-dashed border-slate-100 pb-1 last:border-0">
+                                  <span className="font-medium truncate">{item.quantity}x {item.card_name}</span>
+                                  <span className="text-muted-foreground shrink-0">{item.condition}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
-      <ScrollBar orientation="horizontal" className="mb-2" />
+            );
+          })}
+        </div>
+        <ScrollBar orientation="horizontal" className="mb-2" />
       </div>
     </ScrollArea>
   );
 
   const renderList = () => {
-    // Logique de groupement
     const groups: Record<string, Order[]> = {};
-    const sortedOrders = getSortedOrders(orders);
+    const processedOrders = getFilteredAndSortedOrders(orders);
 
-    sortedOrders.forEach(o => {
+    processedOrders.forEach(o => {
       let groupKey = "Autre";
       if (groupBy === 'status') groupKey = COLUMNS.find(c => c.id === o.status)?.label || o.status;
       else if (groupBy === 'year') groupKey = new Date(o.created_at).getFullYear().toString();
@@ -414,41 +448,102 @@ export default function SuiviPage() {
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
-        <div className="flex items-center gap-2">
-          <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm font-medium">Trier par :</span>
-          <Select value={sortBy} onValueChange={(v: any) => setSortBy(v)}>
-            <SelectTrigger className="w-[140px] bg-white">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="date">Date (Récents)</SelectItem>
-              <SelectItem value="price">Prix (Décroissant)</SelectItem>
-              <SelectItem value="status">Statut</SelectItem>
-              <SelectItem value="tcg">TCG</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        {viewMode === 'list' && (
-          <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-muted-foreground ml-2" />
-            <span className="text-sm font-medium">Grouper par :</span>
-            <Select value={groupBy} onValueChange={(v: any) => setGroupBy(v)}>
-              <SelectTrigger className="w-[140px] bg-white">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="status">Statut</SelectItem>
-                <SelectItem value="year">Année</SelectItem>
-                <SelectItem value="month">Mois</SelectItem>
-                <SelectItem value="tcg">TCG</SelectItem>
-              </SelectContent>
-            </Select>
+      <Card className="bg-slate-50 border-slate-200">
+        <CardContent className="p-4 space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="space-y-2">
+              <label className="text-xs font-bold uppercase text-muted-foreground">Recherche</label>
+              <Input
+                placeholder="N° commande, acheteur..."
+                value={filters.search}
+                onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+                className="bg-white"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-bold uppercase text-muted-foreground">Carte</label>
+              <Input
+                placeholder="Nom de la carte..."
+                value={filters.cardName}
+                onChange={(e) => setFilters({ ...filters, cardName: e.target.value })}
+                className="bg-white"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-bold uppercase text-muted-foreground">TCG / Statut</label>
+              <div className="flex gap-2">
+                <Select value={filters.tcg} onValueChange={(v) => setFilters({ ...filters, tcg: v })}>
+                  <SelectTrigger className="bg-white"><SelectValue placeholder="TCG" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tous les TCG</SelectItem>
+                    <SelectItem value="pokemon">Pokémon</SelectItem>
+                    <SelectItem value="magic">Magic</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={filters.status} onValueChange={(v) => setFilters({ ...filters, status: v })}>
+                  <SelectTrigger className="bg-white"><SelectValue placeholder="Statut" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tous les statuts</SelectItem>
+                    {COLUMNS.map(c => <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-bold uppercase text-muted-foreground">Prix (€)</label>
+              <div className="flex gap-2">
+                <Input placeholder="Min" type="number" value={filters.minPrice} onChange={(e) => setFilters({...filters, minPrice: e.target.value})} className="bg-white" />
+                <Input placeholder="Max" type="number" value={filters.maxPrice} onChange={(e) => setFilters({...filters, maxPrice: e.target.value})} className="bg-white" />
+              </div>
+            </div>
           </div>
-        )}
-      </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-4 pt-2 border-t">
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="flex items-center gap-2">
+                <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium">Trier par :</span>
+                <Select value={sortBy} onValueChange={(v: any) => setSortBy(v)}>
+                  <SelectTrigger className="w-[140px] bg-white">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="date">Date (Récents)</SelectItem>
+                    <SelectItem value="price">Prix (Décroissant)</SelectItem>
+                    <SelectItem value="status">Statut</SelectItem>
+                    <SelectItem value="tcg">TCG</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {viewMode === 'list' && (
+                <div className="flex items-center gap-2">
+                  <Filter className="h-4 w-4 text-muted-foreground ml-2" />
+                  <span className="text-sm font-medium">Grouper par :</span>
+                  <Select value={groupBy} onValueChange={(v: any) => setGroupBy(v)}>
+                    <SelectTrigger className="w-[140px] bg-white">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="status">Statut</SelectItem>
+                      <SelectItem value="year">Année</SelectItem>
+                      <SelectItem value="month">Mois</SelectItem>
+                      <SelectItem value="tcg">TCG</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2">
+               <label className="text-xs font-bold uppercase text-muted-foreground">Dates</label>
+               <Input type="date" value={filters.startDate} onChange={(e) => setFilters({...filters, startDate: e.target.value})} className="bg-white w-32 h-8 text-[11px]" />
+               <span className="text-muted-foreground">→</span>
+               <Input type="date" value={filters.endDate} onChange={(e) => setFilters({...filters, endDate: e.target.value})} className="bg-white w-32 h-8 text-[11px]" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {viewMode === 'kanban' ? renderKanban() : renderList()}
 

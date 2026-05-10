@@ -75,7 +75,7 @@ export default function ShippingPage() {
   if (isLoading) return <div className="container mx-auto py-10 text-center">Chargement...</div>;
 
   return (
-    <div className="container mx-auto py-10 space-y-8 print:block print:p-0 print:m-0">
+    <div className="container mx-auto py-10 space-y-8 print:block print:p-0 print:m-0 print:space-y-0 print:static">
       <div className="flex justify-between items-center print:hidden">
         <h1 className="text-3xl font-bold tracking-tight">Expédition (Picking List)</h1>
         <Button onClick={handlePrint}>
@@ -216,12 +216,25 @@ export default function ShippingPage() {
         @media print {
           @page {
             size: A4;
-            margin: 0.5cm;
+            margin: 0mm;
+          }
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            height: auto !important;
+            overflow: visible !important;
           }
           .print\\:hidden { display: none !important; }
-          .print\\:page-break-after-always { page-break-after: always; }
-          body { background-color: white !important; -webkit-print-color-adjust: exact; color-adjust: exact; margin: 0 !important; padding: 0 !important; }
-          .container { max-width: 100% !important; width: 100% !important; padding: 0 !important; margin: 0 !important; }
+          .print\\:page-break-after-always { page-break-after: always; break-after: page; }
+          body { background-color: white !important; -webkit-print-color-adjust: exact; color-adjust: exact; }
+          .container {
+            max-width: 100% !important;
+            width: 100% !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            display: block !important;
+            position: static !important;
+          }
           pre { white-space: pre-wrap !important; }
           /* Suppression des fonds colorés à l'impression */
           * { -webkit-print-color-adjust: economy !important; print-color-adjust: economy !important; background-color: transparent !important; color: black !important; border-color: black !important; }
