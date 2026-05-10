@@ -87,6 +87,8 @@ export default function SettingsPage() {
         price_alert_threshold: settings.price_alert_threshold,
         price_alert_period_days: settings.price_alert_period_days,
         card_view_mode: settings.card_view_mode
+      }, {
+        onConflict: 'user_id'
       });
 
     if (error) {

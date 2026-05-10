@@ -124,6 +124,7 @@ function CardDetailsContent({ item, history }: { item: any, history: any[] }) {
 
 export default function CollectionPage() {
   const [items, setItems] = useState<any[]>([]);
+  const [allStorages, setAllStorages] = useState<string[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -176,6 +177,18 @@ export default function CollectionPage() {
 
   const fetchInventory = async () => {
     setIsLoading(true);
+
+    // Fetch all storage locations for the filter
+    const { data: storageData } = await supabase
+      .from('inventory_items')
+      .select('storage_location')
+      .not('storage_location', 'is', null);
+
+    if (storageData) {
+      const uniqueStorages = Array.from(new Set(storageData.map((s: any) => s.storage_location)));
+      setAllStorages(uniqueStorages as string[]);
+    }
+
     let query = supabase
       .from('inventory_items')
       .select('*', { count: 'exact' });
@@ -212,6 +225,11 @@ export default function CollectionPage() {
     fetchSettings();
     fetchInventory();
   }, [currentPage, pageSize, filters, sortBy, sortOrder]);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters, sortBy, sortOrder, pageSize]);
 
   const handleUpdatePrices = async () => {
     setIsRefreshing(true);
@@ -459,7 +477,7 @@ export default function CollectionPage() {
 
   const processedItems = items;
 
-  const storages = Array.from(new Set(items.map(it => it.storage_location).filter(Boolean)));
+  const storages = allStorages;
 
   // Groupement
   const groups: Record<string, any[]> = {};
