@@ -46,11 +46,14 @@ export default function LoginPage() {
   return (
     <div className="flex items-center justify-center min-h-screen bg-slate-50 p-4">
       <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold">Connexion</CardTitle>
-          <CardDescription>
-            Entrez vos identifiants pour accéder à Minty
-          </CardDescription>
+        <CardHeader className="space-y-4 flex flex-col items-center text-center">
+          <img src="/logo.png" alt="Minty Logo" className="h-12 w-auto mb-2" />
+          <div className="space-y-1">
+            <CardTitle className="text-2xl font-bold">Connexion</CardTitle>
+            <CardDescription>
+              Entrez vos identifiants pour accéder à votre espace
+            </CardDescription>
+          </div>
         </CardHeader>
         <form onSubmit={handleLogin}>
           <CardContent className="space-y-4">
