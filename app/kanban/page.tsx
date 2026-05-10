@@ -17,7 +17,8 @@ import {
   ChevronUp,
   MoreVertical,
   Plus,
-  Pencil
+  Pencil,
+  CheckCircle
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -29,7 +30,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { OrderModal } from "@/components/orders/OrderModal";
 
-type OrderStatus = 'paid' | 'preparing' | 'shipped' | 'completed';
+type OrderStatus = 'paid' | 'ready' | 'preparing' | 'shipped' | 'completed';
 
 interface Order {
   id: string;
@@ -44,6 +45,7 @@ interface Order {
 
 const COLUMNS: { id: OrderStatus; label: string; icon: any; color: string }[] = [
   { id: 'paid', label: 'À Préparer', icon: Clock, color: 'bg-orange-100 text-orange-700' },
+  { id: 'ready', label: 'Prête', icon: CheckCircle, color: 'bg-green-100 text-green-700' },
   { id: 'preparing', label: 'En cours', icon: Package, color: 'bg-blue-100 text-blue-700' },
   { id: 'shipped', label: 'Expédié', icon: Truck, color: 'bg-purple-100 text-purple-700' },
   { id: 'completed', label: 'Terminé', icon: CheckCircle2, color: 'bg-green-100 text-green-700' },
@@ -87,7 +89,7 @@ export default function KanbanPage() {
   };
 
   const moveOrderNext = (orderId: string, currentStatus: OrderStatus) => {
-    const statusOrder: OrderStatus[] = ['paid', 'preparing', 'shipped', 'completed'];
+    const statusOrder: OrderStatus[] = ['paid', 'ready', 'preparing', 'shipped', 'completed'];
     const currentIndex = statusOrder.indexOf(currentStatus);
     if (currentIndex < statusOrder.length - 1) {
       updateStatus(orderId, statusOrder[currentIndex + 1]);

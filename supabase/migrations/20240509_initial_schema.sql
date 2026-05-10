@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS orders (
   total_price DECIMAL(10, 2),
   shipping_method TEXT,
   shipping_cost DECIMAL(10, 2),
-  status TEXT DEFAULT 'paid',
+  status TEXT DEFAULT 'paid', -- 'paid', 'ready', 'preparing', 'shipped', 'completed'
   source TEXT DEFAULT 'email',
   is_trust_service BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),

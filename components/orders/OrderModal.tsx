@@ -66,7 +66,14 @@ export function OrderModal({ order, isOpen, onClose, onRefresh }: OrderModalProp
         orderId = data.id;
       }
 
-      const itemsToInsert = items.map(({ id, ...rest }) => ({ ...rest, order_id: orderId }));
+      // Division par unité
+      const itemsToInsert: any[] = [];
+      for (const item of items) {
+        for (let i = 0; i < (item.quantity || 1); i++) {
+          const { id, quantity, ...rest } = item;
+          itemsToInsert.push({ ...rest, quantity: 1, order_id: orderId });
+        }
+      }
       const { error: itemError } = await supabase.from('order_items').insert(itemsToInsert);
       if (itemError) throw itemError;
 

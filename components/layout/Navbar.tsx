@@ -56,6 +56,9 @@ export function Navbar() {
               <Link href="/shipping" className="text-sm font-medium hover:text-primary transition-colors">
                 Expédition
               </Link>
+              <Link href="/inventory" className="text-sm font-medium hover:text-primary transition-colors">
+                Suivi Prix
+              </Link>
             </div>
           )}
         </div>

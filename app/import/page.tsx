@@ -125,23 +125,27 @@ export default function ImportPage() {
         orderId = order.id;
       }
 
-      // Items
-      const itemsToInsert = await Promise.all(parsedData.items.map(async (item) => {
+      // Items : Division par unité pour un picking indépendant
+      const itemsToInsert: any[] = [];
+
+      for (const item of parsedData.items) {
         const game = item.expansion.toLowerCase().includes('magic') || item.details === 'R' ? 'magic' : 'pokemon';
         const imageUrl = await getCardThumbnail(item.name, game);
 
-        return {
-          order_id: orderId,
-          card_name: item.name,
-          expansion: item.expansion,
-          game,
-          condition: item.condition,
-          language: item.language,
-          quantity: item.quantity,
-          price: item.price,
-          image_url: imageUrl
-        };
-      }));
+        for (let i = 0; i < item.quantity; i++) {
+          itemsToInsert.push({
+            order_id: orderId,
+            card_name: item.name,
+            expansion: item.expansion,
+            game,
+            condition: item.condition,
+            language: item.language,
+            quantity: 1, // On stocke par unité
+            price: item.price,
+            image_url: imageUrl
+          });
+        }
+      }
 
       // S'assurer de ne pas avoir d'id
       const cleanItems = itemsToInsert.map(({ id, ...rest }: any) => rest);
