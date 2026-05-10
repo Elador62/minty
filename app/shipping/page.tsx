@@ -75,7 +75,7 @@ export default function ShippingPage() {
   if (isLoading) return <div className="container mx-auto py-10 text-center">Chargement...</div>;
 
   return (
-    <div className="container mx-auto py-10 space-y-8 print:p-0 print:m-0 print:space-y-0">
+    <div className="container mx-auto py-10 space-y-8 print:p-0 print:m-0 print:space-y-0 print:block">
       <div className="flex justify-between items-center print:hidden">
         <h1 className="text-3xl font-bold tracking-tight">Expédition (Picking List)</h1>
         <Button onClick={handlePrint}>
@@ -141,7 +141,7 @@ export default function ShippingPage() {
                       <h4 className="font-bold text-sm uppercase text-muted-foreground border-b pb-1 print:text-black print:border-black print:text-[10px]">Articles à préparer</h4>
                       <div className="space-y-4 print:space-y-1">
                         {order.order_items?.map((item: any, idx: number) => (
-                          <div key={item.id} className={`flex gap-4 items-center border-b border-dashed pb-3 last:border-0 print:pb-1 ${item.is_picked ? 'opacity-40 grayscale' : ''}`}>
+                        <div key={item.id} className={`flex gap-4 items-center border-b border-dashed pb-3 last:border-0 print:pb-1 ${item.is_picked ? 'opacity-40 grayscale print:opacity-100 print:grayscale-0' : ''}`}>
                             <div>
                               <Checkbox
                                 id={item.id}
@@ -220,8 +220,9 @@ export default function ShippingPage() {
           }
           .print\\:hidden { display: none !important; }
           .print\\:page-break-after-always { page-break-after: always; }
+          .print\:page-break-before-auto { page-break-before: auto; }
           body { background-color: white !important; -webkit-print-color-adjust: exact; color-adjust: exact; }
-          .container { max-width: 100% !important; width: 100% !important; padding: 0 !important; }
+          .container { max-width: 100% !important; width: 100% !important; padding: 0 !important; margin: 0 !important; }
           pre { white-space: pre-wrap !important; }
           /* Suppression des fonds colorés à l'impression */
           * { -webkit-print-color-adjust: economy !important; print-color-adjust: economy !important; background-color: transparent !important; color: black !important; border-color: black !important; }

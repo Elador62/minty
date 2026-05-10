@@ -33,6 +33,7 @@ export default function DashboardPage() {
       const { data: settingsData } = await supabase.from('user_settings').select('*').single();
       setSettings(settingsData);
       const threshold = settingsData?.price_alert_threshold || 10;
+      const periodDays = settingsData?.price_alert_period_days || 30;
 
       // 1. Total CA et Commandes
       const { data: orders } = await supabase
@@ -79,12 +80,20 @@ export default function DashboardPage() {
 
       const alerts = inventory?.filter((item: any) => {
         const diff = ((Number(item.last_market_price) - Number(item.listed_price)) / Number(item.listed_price)) * 100;
-        return diff >= threshold;
+
+        // Simulation d'une augmentation "récente" basée sur la période paramétrable
+        // Dans un cas réel, on comparerait avec un historique de prix
+        const itemDate = new Date(item.created_at);
+        const now = new Date();
+        const diffDays = (now.getTime() - itemDate.getTime()) / (1000 * 3600 * 24);
+
+        return diff >= threshold && diffDays <= periodDays;
       }).map((item: any) => ({
         name: item.card_name,
         listed: item.listed_price,
         market: item.last_market_price,
-        diff: ((Number(item.last_market_price) - Number(item.listed_price)) / Number(item.listed_price)) * 100
+        diff: ((Number(item.last_market_price) - Number(item.listed_price)) / Number(item.listed_price)) * 100,
+        date: new Date(item.created_at).toLocaleDateString()
       })) || [];
 
       setStats({
@@ -197,9 +206,11 @@ export default function DashboardPage() {
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-orange-500" /> Alertes Opportunités (+{settings?.price_alert_threshold || 10}%)
+              <AlertCircle className="h-5 w-5 text-orange-500" /> Alertes Hausse de Prix (+{settings?.price_alert_threshold || 10}%)
             </CardTitle>
-            <CardDescription>Cartes dont le prix marché a fortement augmenté par rapport à votre prix listé</CardDescription>
+            <CardDescription>
+              Hausse détectée sur les derniers {settings?.price_alert_period_days || 30} jours
+            </CardDescription>
           </CardHeader>
           <CardContent>
             {stats.alerts.length > 0 ? (
@@ -207,6 +218,7 @@ export default function DashboardPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Carte</TableHead>
+                    <TableHead>Date détection</TableHead>
                     <TableHead className="text-right">Votre Prix</TableHead>
                     <TableHead className="text-right">Marché</TableHead>
                     <TableHead className="text-right">Hausse</TableHead>
@@ -216,6 +228,7 @@ export default function DashboardPage() {
                   {stats.alerts.map((alert, i) => (
                     <TableRow key={i}>
                       <TableCell className="font-medium">{alert.name}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{alert.date}</TableCell>
                       <TableCell className="text-right">{alert.listed.toFixed(2)}€</TableCell>
                       <TableCell className="text-right font-bold text-green-600">{alert.market.toFixed(2)}€</TableCell>
                       <TableCell className="text-right">

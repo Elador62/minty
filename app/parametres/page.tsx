@@ -37,7 +37,8 @@ export default function SettingsPage() {
       completed: "#f0fdf4"
     },
     price_sources: ["Trend CardMarket", "Avg Sell CardMarket"],
-    price_alert_threshold: 10
+    price_alert_threshold: 10,
+    price_alert_period_days: 30
   });
 
   const supabase = createClient();
@@ -81,7 +82,8 @@ export default function SettingsPage() {
         user_id: user.id,
         kanban_colors: settings.kanban_colors,
         price_sources: settings.price_sources,
-        price_alert_threshold: settings.price_alert_threshold
+        price_alert_threshold: settings.price_alert_threshold,
+        price_alert_period_days: settings.price_alert_period_days
       });
 
     if (error) {
@@ -201,6 +203,23 @@ export default function SettingsPage() {
               </div>
               <p className="text-xs text-muted-foreground">
                 Une alerte sera générée si le prix du marché dépasse votre prix de vente de ce pourcentage.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="period">Période d'analyse (jours)</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  id="period"
+                  type="number"
+                  value={settings.price_alert_period_days}
+                  onChange={(e) => setSettings({ ...settings, price_alert_period_days: parseInt(e.target.value) })}
+                  className="max-w-[120px]"
+                />
+                <span className="text-muted-foreground">jours</span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Délai pour le calcul de l'évolution des prix.
               </p>
             </div>
           </CardContent>
