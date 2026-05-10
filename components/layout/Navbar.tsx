@@ -36,10 +36,10 @@ export function Navbar() {
 
   return (
     <nav className="border-b bg-white">
-      <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+      <div className="container mx-auto px-4 h-32 flex items-center justify-between">
         <div className="flex items-center gap-8">
           <Link href="/" className="font-bold text-xl text-primary">
-            Minty
+            <img src="/logo.png" alt="Minty Logo" className="h-24 w-auto" />
           </Link>
 
           {user && (
@@ -47,8 +47,8 @@ export function Navbar() {
               <Link href="/dashboard" className="text-sm font-medium hover:text-primary transition-colors">
                 Dashboard
               </Link>
-              <Link href="/kanban" className="text-sm font-medium hover:text-primary transition-colors">
-                Kanban
+              <Link href="/suivi" className="text-sm font-medium hover:text-primary transition-colors">
+                Suivi
               </Link>
               <Link href="/import" className="text-sm font-medium hover:text-primary transition-colors">
                 Import
@@ -58,6 +58,9 @@ export function Navbar() {
               </Link>
               <Link href="/inventory" className="text-sm font-medium hover:text-primary transition-colors">
                 Suivi Prix
+              </Link>
+              <Link href="/parametres" className="text-sm font-medium hover:text-primary transition-colors">
+                Paramètres
               </Link>
             </div>
           )}

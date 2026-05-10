@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import { parseCardMarketEmail, ParsedOrder } from "@/lib/parser/emailParser";
+import { parseCardMarketCSV, ParsedCSVOrder } from "@/lib/parser/csvParser";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, CheckCircle2, Import, Loader2, AlertTriangle } from "lucide-react";
+import { AlertCircle, CheckCircle2, Import, Loader2, AlertTriangle, FileSpreadsheet, Mail } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { getCardThumbnail } from "@/lib/cardmarket/images";
@@ -19,292 +20,211 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const STATUS_RANK: Record<string, number> = {
-  'À payer': 1,
   'paid': 2,
-  'Payée': 2,
   'preparing': 3,
   'shipped': 4,
-  'Arrivée': 5,
   'completed': 5
 };
 
 export default function ImportPage() {
-  const [emailText, setEmailText] = useState("");
-  const [parsedData, setParsedData] = useState<ParsedOrder | null>(null);
+  const [inputText, setInputText] = useState("");
+  const [importMode, setImportMode] = useState<"email" | "csv">("email");
+  const [parsedOrders, setParsedOrders] = useState<any[]>([]);
   const [isSaving, setIsSaving] = useState(false);
-  const [existingOrder, setExistingOrder] = useState<any>(null);
+  const [existingOrdersMap, setExistingOrdersMap] = useState<Record<string, any>>({});
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const { toast } = useToast();
 
   const handleParse = async () => {
-    const result = parseCardMarketEmail(emailText);
-    if (!result) {
+    let results: any[] = [];
+    if (importMode === "email") {
+      const result = parseCardMarketEmail(inputText);
+      if (result) results = [result];
+    } else {
+      results = parseCardMarketCSV(inputText);
+    }
+
+    if (results.length === 0) {
       toast({
         title: "Erreur d'analyse",
-        description: "Le format de l'email n'a pas été reconnu.",
+        description: "Le format n'a pas été reconnu.",
         variant: "destructive",
       });
       return;
     }
 
-    setParsedData(result);
+    setParsedOrders(results);
 
-    // Vérifier si la commande existe déjà
+    // Vérifier les doublons
     const supabase = createClient();
+    const orderIds = results.map(r => r.orderId);
     const { data } = await supabase
       .from('orders')
       .select('*')
-      .eq('external_order_id', result.orderId)
-      .single();
+      .in('external_order_id', orderIds);
 
-    if (data) {
-      setExistingOrder(data);
+    if (data && data.length > 0) {
+      const map: Record<string, any> = {};
+      data.forEach((o: any) => map[o.external_order_id] = o);
+      setExistingOrdersMap(map);
       setShowConfirmModal(true);
     }
   };
 
   const executeSave = async (isUpdate = false) => {
-    if (!parsedData) return;
+    if (parsedOrders.length === 0) return;
 
     setIsSaving(true);
     const supabase = createClient();
     try {
       const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Non authentifié");
 
-      if (!user) {
-        toast({
-          title: "Authentification requise",
-          description: "Vous devez être connecté.",
-          variant: "destructive",
-        });
-        setIsSaving(false);
-        return;
-      }
+      for (const order of parsedOrders) {
+        const orderData = {
+          user_id: user.id,
+          external_order_id: order.orderId,
+          buyer_name: order.buyer || order.name,
+          buyer_address: order.address,
+          total_price: order.totalValue,
+          shipping_cost: order.shippingCost,
+          status: 'paid', // Par défaut pour un import
+          source: importMode
+        };
 
-      const statusMap: Record<string, string> = {
-        'Payée': 'paid',
-        'À payer': 'paid',
-        'Arrivée': 'completed'
-      };
+        const existing = existingOrdersMap[order.orderId];
+        let orderId = "";
 
-      const orderData = {
-        user_id: user.id,
-        external_order_id: parsedData.orderId,
-        buyer_name: parsedData.buyer,
-        buyer_address: parsedData.address,
-        total_price: parsedData.totalValue,
-        shipping_cost: parsedData.shippingCost,
-        status: statusMap[parsedData.status] || 'preparing',
-        source: 'email'
-      };
-
-      let orderId = "";
-
-      if (isUpdate && existingOrder) {
-        const { error: updateError } = await supabase
-          .from('orders')
-          .update(orderData)
-          .eq('id', existingOrder.id);
-
-        if (updateError) throw updateError;
-        orderId = existingOrder.id;
-
-        // Supprimer les anciens items pour les recréer
-        const { error: deleteError } = await supabase.from('order_items').delete().eq('order_id', orderId);
-        if (deleteError) throw deleteError;
-      } else {
-        const { data: order, error: orderError } = await supabase
-          .from('orders')
-          .insert(orderData)
-          .select()
-          .single();
-
-        if (orderError) throw orderError;
-        orderId = order.id;
-      }
-
-      // Items : Division par unité pour un picking indépendant
-      const itemsToInsert: any[] = [];
-
-      for (const item of parsedData.items) {
-        const game = item.expansion.toLowerCase().includes('magic') || item.details === 'R' ? 'magic' : 'pokemon';
-        const imageUrl = await getCardThumbnail(item.name, game);
-
-        for (let i = 0; i < item.quantity; i++) {
-          itemsToInsert.push({
-            order_id: orderId,
-            card_name: item.name,
-            expansion: item.expansion,
-            game,
-            condition: item.condition,
-            language: item.language,
-            quantity: 1, // On stocke par unité
-            price: item.price,
-            image_url: imageUrl
-          });
+        if (existing && isUpdate) {
+          const { error: updateError } = await supabase
+            .from('orders')
+            .update(orderData)
+            .eq('id', existing.id);
+          if (updateError) throw updateError;
+          orderId = existing.id;
+          await supabase.from('order_items').delete().eq('order_id', orderId);
+        } else if (!existing) {
+          const { data: newOrder, error: orderError } = await supabase
+            .from('orders')
+            .insert(orderData)
+            .select()
+            .single();
+          if (orderError) throw orderError;
+          orderId = newOrder.id;
+        } else {
+          continue; // On ne fait rien si existant et qu'on ne demande pas d'update
         }
+
+        const itemsToInsert: any[] = [];
+        for (const item of order.items) {
+          const game = item.expansion?.toLowerCase().includes('magic') || item.details === 'R' ? 'magic' : 'pokemon';
+          const imageUrl = await getCardThumbnail(item.name, game);
+
+          for (let i = 0; i < item.quantity; i++) {
+            itemsToInsert.push({
+              order_id: orderId,
+              card_name: item.name,
+              expansion: item.expansion,
+              game,
+              condition: item.condition,
+              language: item.language,
+              quantity: 1,
+              price: item.price,
+              image_url: imageUrl
+            });
+          }
+        }
+        await supabase.from('order_items').insert(itemsToInsert);
       }
 
-      // S'assurer de ne pas avoir d'id
-      const cleanItems = itemsToInsert.map(({ id, ...rest }: any) => rest);
-
-      const { error: itemsError } = await supabase
-        .from('order_items')
-        .insert(cleanItems);
-
-      if (itemsError) throw itemsError;
-
-      toast({
-        title: isUpdate ? "Commande mise à jour !" : "Commande enregistrée !",
-        description: `La commande ${parsedData.orderId} est prête.`,
-      });
-
-      setParsedData(null);
-      setEmailText("");
-      setExistingOrder(null);
+      toast({ title: "Importation réussie", description: `${parsedOrders.length} commande(s) traitée(s).` });
+      setParsedOrders([]);
+      setInputText("");
+      setExistingOrdersMap({});
       setShowConfirmModal(false);
-
     } catch (error: any) {
-      toast({
-        title: "Erreur",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Erreur", description: error.message, variant: "destructive" });
     } finally {
       setIsSaving(false);
     }
   };
 
-  const getStatusAlert = () => {
-    if (!existingOrder || !parsedData) return null;
-    const rankOld = STATUS_RANK[existingOrder.status] || 0;
-    const rankNew = STATUS_RANK[parsedData.status] || 0;
-
-    if (rankNew > rankOld) {
-      return {
-        title: "Mise à jour d'état",
-        desc: `La commande va passer de "${existingOrder.status}" à "${parsedData.status}". Confirmer ?`,
-        variant: "info"
-      };
-    } else if (rankNew < rankOld) {
-      return {
-        title: "Attention : Retour en arrière",
-        desc: `Le nouvel import a un état "${parsedData.status}" moins avancé que l'existant ("${existingOrder.status}"). Voulez-vous vraiment écraser ?`,
-        variant: "warning"
-      };
-    }
-    return {
-      title: "Commande déjà existante",
-      desc: "Cette commande est déjà enregistrée avec le même état. Voulez-vous la mettre à jour ?",
-      variant: "info"
-    };
-  };
-
-  const alertInfo = getStatusAlert();
-
   return (
     <div className="container mx-auto py-10 space-y-8">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Importation de Commandes</h1>
-        <p className="text-muted-foreground">
-          Copiez et collez le contenu brut de l'email CardMarket ci-dessous.
-        </p>
+        <p className="text-muted-foreground">Importez vos ventes CardMarket via email ou export CSV.</p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Email CardMarket</CardTitle>
-          <CardDescription>Collez le texte brut ici</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <Textarea
-            placeholder="Bonjour Nicolas, <buyer> t'a acheté des cartes..."
-            className="min-h-[200px] font-mono text-sm"
-            value={emailText}
-            onChange={(e) => setEmailText(e.target.value)}
-          />
-          <Button onClick={handleParse} className="w-full">
-            <Import className="mr-2 h-4 w-4" /> Analyser l'email
-          </Button>
-        </CardContent>
-      </Card>
+      <Tabs defaultValue="email" onValueChange={(v: any) => setImportMode(v)}>
+        <TabsList className="grid w-full grid-cols-2 max-w-md">
+          <TabsTrigger value="email"><Mail className="h-4 w-4 mr-2" /> Email</TabsTrigger>
+          <TabsTrigger value="csv"><FileSpreadsheet className="h-4 w-4 mr-2" /> Export CSV</TabsTrigger>
+        </TabsList>
 
-      {parsedData && (
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle>{importMode === 'email' ? 'Email CardMarket' : 'CSV CardMarket'}</CardTitle>
+            <CardDescription>
+              {importMode === 'email'
+                ? 'Collez le texte brut de l\'email de confirmation de vente.'
+                : 'Collez le contenu de votre export CSV CardMarket (Sold Orders).'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Textarea
+              placeholder={importMode === 'email' ? "Bonjour Nicolas, <buyer> t'a acheté..." : "OrderID;Username;Name;..."}
+              className="min-h-[200px] font-mono text-sm"
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+            />
+            <Button onClick={handleParse} className="w-full">
+              <Import className="mr-2 h-4 w-4" /> Analyser les données
+            </Button>
+          </CardContent>
+        </Card>
+      </Tabs>
+
+      {parsedOrders.length > 0 && (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardDescription>ID Commande</CardDescription>
-                <CardTitle className="text-xl">{parsedData.orderId}</CardTitle>
-              </CardHeader>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardDescription>Acheteur</CardDescription>
-                <CardTitle className="text-xl">{parsedData.buyer}</CardTitle>
-              </CardHeader>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardDescription>Statut détecté</CardDescription>
-                <CardTitle className="text-xl">
-                  <Badge variant="secondary">
-                    {parsedData.status}
-                  </Badge>
-                </CardTitle>
-              </CardHeader>
-            </Card>
-          </div>
-
           <Card>
             <CardHeader>
-              <CardTitle>Contenu de la commande</CardTitle>
+              <CardTitle>{parsedOrders.length} Commande(s) détectée(s)</CardTitle>
             </CardHeader>
             <CardContent>
+              <div className="max-h-[400px] overflow-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[50px]">Qté</TableHead>
-                    <TableHead>Nom</TableHead>
-                    <TableHead>Édition</TableHead>
-                    <TableHead>État</TableHead>
-                    <TableHead>Langue</TableHead>
-                    <TableHead className="text-right">Prix</TableHead>
+                    <TableHead>ID</TableHead>
+                    <TableHead>Acheteur</TableHead>
+                    <TableHead>Articles</TableHead>
+                    <TableHead className="text-right">Total</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {parsedData.items.map((item, index) => (
-                    <TableRow key={index}>
-                      <TableCell>{item.quantity}x</TableCell>
-                      <TableCell className="font-medium">{item.name}</TableCell>
-                      <TableCell>{item.expansion}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{item.condition}</Badge>
-                      </TableCell>
-                      <TableCell>{item.language}</TableCell>
-                      <TableCell className="text-right">{item.price.toFixed(2)} €</TableCell>
+                  {parsedOrders.map((order, idx) => (
+                    <TableRow key={idx}>
+                      <TableCell className="font-mono text-xs">{order.orderId}</TableCell>
+                      <TableCell>{order.buyer || order.name}</TableCell>
+                      <TableCell>{order.items.length} lignes</TableCell>
+                      <TableCell className="text-right font-bold">{order.totalValue.toFixed(2)} €</TableCell>
                     </TableRow>
                   ))}
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-right font-medium">Frais de port</TableCell>
-                    <TableCell className="text-right">{parsedData.shippingCost.toFixed(2)} €</TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-right font-bold">Total</TableCell>
-                    <TableCell className="text-right font-bold">{parsedData.totalValue.toFixed(2)} €</TableCell>
-                  </TableRow>
                 </TableBody>
               </Table>
+              </div>
             </CardContent>
           </Card>
 
           <div className="flex justify-end gap-4">
-            <Button variant="outline" onClick={() => setParsedData(null)}>Annuler</Button>
-            <Button onClick={() => existingOrder ? setShowConfirmModal(true) : executeSave()} className="bg-green-600 hover:bg-green-700" disabled={isSaving}>
+            <Button variant="outline" onClick={() => setParsedOrders([])}>Annuler</Button>
+            <Button onClick={() => Object.keys(existingOrdersMap).length > 0 ? setShowConfirmModal(true) : executeSave()} className="bg-green-600 hover:bg-green-700" disabled={isSaving}>
               {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
-              {existingOrder ? "Mettre à jour" : "Enregistrer"}
+              Enregistrer
             </Button>
           </div>
         </div>
@@ -314,18 +234,16 @@ export default function ImportPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              {alertInfo?.variant === 'warning' ? <AlertTriangle className="text-yellow-500" /> : <AlertCircle className="text-blue-500" />}
-              {alertInfo?.title}
+              <AlertTriangle className="text-yellow-500" /> Commande(s) déjà existante(s)
             </DialogTitle>
             <DialogDescription className="py-4">
-              {alertInfo?.desc}
+              {Object.keys(existingOrdersMap).length} commande(s) sont déjà présentes en base de données. Voulez-vous les mettre à jour ou ignorer les doublons ?
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
+          <DialogFooter className="gap-2">
+            <Button variant="ghost" onClick={() => executeSave(false)}>Ignorer les doublons</Button>
             <Button variant="outline" onClick={() => setShowConfirmModal(false)}>Annuler</Button>
-            <Button onClick={() => executeSave(true)} disabled={isSaving}>
-              {isSaving ? "Action en cours..." : "Confirmer la mise à jour"}
-            </Button>
+            <Button onClick={() => executeSave(true)} disabled={isSaving}>Confirmer la mise à jour</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
