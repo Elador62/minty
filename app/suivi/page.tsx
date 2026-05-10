@@ -22,7 +22,9 @@ import {
   LayoutDashboard,
   List as ListIcon,
   Filter,
-  ArrowUpDown
+  ArrowUpDown,
+  Trash2,
+  AlertTriangle
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -36,6 +38,14 @@ import { OrderModal } from "@/components/orders/OrderModal";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 type OrderStatus = 'paid' | 'ready' | 'preparing' | 'shipped' | 'completed';
 
@@ -65,6 +75,7 @@ export default function SuiviPage() {
   const [expandedOrders, setExpandedOrders] = useState<Record<string, boolean>>({});
   const [editingOrder, setEditingOrder] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [orderToDelete, setOrderToDelete] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
   const [groupBy, setGroupBy] = useState<'status' | 'year' | 'month' | 'tcg'>('status');
   const [sortBy, setSortBy] = useState<'status' | 'date' | 'price' | 'tcg'>('date');
@@ -149,6 +160,23 @@ export default function SuiviPage() {
     setIsModalOpen(true);
   };
 
+  const handleDeleteOrder = async () => {
+    if (!orderToDelete) return;
+
+    const { error } = await supabase
+      .from('orders')
+      .delete()
+      .eq('id', orderToDelete);
+
+    if (error) {
+      toast({ title: "Erreur", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Commande supprimée" });
+      fetchOrders();
+    }
+    setOrderToDelete(null);
+  };
+
   const getSortedOrders = (ordersToSort: Order[]) => {
     return [...ordersToSort].sort((a, b) => {
       if (sortBy === 'date') return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
@@ -166,7 +194,8 @@ export default function SuiviPage() {
   };
 
   const renderKanban = () => (
-    <ScrollArea className="w-full whitespace-nowrap rounded-md border bg-slate-50/50">
+    <ScrollArea className="w-full whitespace-nowrap rounded-md border bg-slate-50/50 [direction:rtl]">
+      <div className="[direction:ltr]">
       <div className="flex w-max space-x-6 p-6 min-h-[700px]">
         {COLUMNS.map((col) => {
           const colOrders = getSortedOrders(orders.filter(o => o.status === col.id));
@@ -208,6 +237,9 @@ export default function SuiviPage() {
                               <DropdownMenuLabel>Actions</DropdownMenuLabel>
                               <DropdownMenuItem onClick={() => handleEdit(order)}>
                                 <Pencil className="mr-2 h-4 w-4" /> Modifier
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => setOrderToDelete(order.id)} className="text-red-600">
+                                <Trash2 className="mr-2 h-4 w-4" /> Supprimer
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuLabel className="text-[10px] uppercase text-muted-foreground">Colonnes</DropdownMenuLabel>
@@ -273,7 +305,8 @@ export default function SuiviPage() {
           );
         })}
       </div>
-      <ScrollBar orientation="horizontal" />
+      <ScrollBar orientation="horizontal" className="mb-2" />
+      </div>
     </ScrollArea>
   );
 
@@ -336,6 +369,7 @@ export default function SuiviPage() {
                       </TableCell>
                       <TableCell className="text-right">
                         <Button variant="ghost" size="sm" onClick={() => handleEdit(order)}><Pencil className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="sm" onClick={() => setOrderToDelete(order.id)} className="text-red-600"><Trash2 className="h-4 w-4" /></Button>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -426,6 +460,23 @@ export default function SuiviPage() {
           onRefresh={fetchOrders}
         />
       )}
+
+      <Dialog open={!!orderToDelete} onOpenChange={(open) => !open && setOrderToDelete(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="text-red-500" /> Confirmer la suppression
+            </DialogTitle>
+            <DialogDescription className="py-4">
+              Êtes-vous sûr de vouloir supprimer cette commande ? Cette action est irréversible.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOrderToDelete(null)}>Annuler</Button>
+            <Button variant="destructive" onClick={handleDeleteOrder}>Supprimer</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

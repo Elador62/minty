@@ -75,7 +75,7 @@ export default function ShippingPage() {
   if (isLoading) return <div className="container mx-auto py-10 text-center">Chargement...</div>;
 
   return (
-    <div className="container mx-auto py-10 space-y-8 print:p-0 print:m-0 print:space-y-0 print:block">
+    <div className="container mx-auto py-10 space-y-8 print:block print:p-0 print:m-0">
       <div className="flex justify-between items-center print:hidden">
         <h1 className="text-3xl font-bold tracking-tight">Expédition (Picking List)</h1>
         <Button onClick={handlePrint}>
@@ -220,8 +220,7 @@ export default function ShippingPage() {
           }
           .print\\:hidden { display: none !important; }
           .print\\:page-break-after-always { page-break-after: always; }
-          .print\:page-break-before-auto { page-break-before: auto; }
-          body { background-color: white !important; -webkit-print-color-adjust: exact; color-adjust: exact; }
+          body { background-color: white !important; -webkit-print-color-adjust: exact; color-adjust: exact; margin: 0 !important; padding: 0 !important; }
           .container { max-width: 100% !important; width: 100% !important; padding: 0 !important; margin: 0 !important; }
           pre { white-space: pre-wrap !important; }
           /* Suppression des fonds colorés à l'impression */

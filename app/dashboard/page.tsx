@@ -82,7 +82,7 @@ export default function DashboardPage() {
         const diff = ((Number(item.last_market_price) - Number(item.listed_price)) / Number(item.listed_price)) * 100;
 
         // Simulation d'une augmentation "récente" basée sur la période paramétrable
-        // Dans un cas réel, on comparerait avec un historique de prix
+        // On vérifie la date de création de l'item d'inventaire
         const itemDate = new Date(item.created_at);
         const now = new Date();
         const diffDays = (now.getTime() - itemDate.getTime()) / (1000 * 3600 * 24);
@@ -90,8 +90,8 @@ export default function DashboardPage() {
         return diff >= threshold && diffDays <= periodDays;
       }).map((item: any) => ({
         name: item.card_name,
-        listed: item.listed_price,
-        market: item.last_market_price,
+        listed: Number(item.listed_price),
+        market: Number(item.last_market_price),
         diff: ((Number(item.last_market_price) - Number(item.listed_price)) / Number(item.listed_price)) * 100,
         date: new Date(item.created_at).toLocaleDateString()
       })) || [];
