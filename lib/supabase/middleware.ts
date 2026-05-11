@@ -28,7 +28,13 @@ export async function updateSession(request: NextRequest) {
   )
 
   // refreshing the auth token
-  await supabase.auth.getUser()
+  try {
+    await supabase.auth.getUser()
+  } catch (e) {
+    // If there is an error, we still want to return the response
+    // to allow the request to proceed (e.g. if Supabase is down or env vars are missing)
+    console.error("Middleware Auth Error:", e)
+  }
 
   return supabaseResponse
 }

@@ -87,3 +87,9 @@ Vercel génère une URL de production (ex: `https://votre-app.vercel.app`). Vous
 ### 4. Optimisation (Optionnel)
 - Pour des performances optimales avec Supabase, il est recommandé d'activer le **Connection Pooling** (via PgBouncer) dans les paramètres de base de données si vous prévoyez un trafic important.
 - L'application utilise `npm run build` qui exécute `next build` pour générer un build de production optimisé.
+
+### 🛠 Dépannage (Vercel)
+Si vous obtenez une erreur **500: INTERNAL_SERVER_ERROR (MIDDLEWARE_INVOCATION_FAILED)** :
+1. Vérifiez que vos variables d'environnement (`NEXT_PUBLIC_SUPABASE_URL` et `NEXT_PUBLIC_SUPABASE_ANON_KEY`) sont correctement saisies dans Vercel.
+2. Assurez-vous qu'il n'y a pas d'espace avant ou après les valeurs des clés.
+3. Redéployez votre application après avoir vérifié les variables.
