@@ -186,7 +186,8 @@ export default function CollectionPage() {
       .not('storage_location', 'is', null);
 
     if (storageData) {
-      const uniqueStorages = Array.from(new Set(storageData.map((s: any) => s.storage_location)));
+      const uniqueStorages = Array.from(new Set(storageData.map((s: any) => s.storage_location)))
+        .filter(s => typeof s === 'string' && s.trim() !== '');
       setAllStorages(uniqueStorages as string[]);
     }
 
@@ -566,7 +567,11 @@ export default function CollectionPage() {
                 <SelectTrigger className="bg-white h-9"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Tous les lieux</SelectItem>
-                  {storages.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                  {storages.map(s => (
+                    <SelectItem key={s} value={s || "unnamed"}>
+                      {s}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
