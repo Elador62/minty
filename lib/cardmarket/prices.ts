@@ -1,6 +1,6 @@
-export async function getCardPrice(name: string, game: string, expansion?: string, isFoil?: boolean): Promise<number | null> {
-  // Nettoyer le nom
-  const cleanName = name.split(' (')[0].replace(/\s*\d+\s*$/, '').trim();
+export async function getCardPrice(name: string, game: string, expansion?: string, isFoil?: boolean, nameEn?: string): Promise<number | null> {
+  // On utilise le nom anglais en priorité s'il est fourni
+  const cleanName = (nameEn || name).split(' (')[0].replace(/\s*\d+\s*$/, '').trim();
 
   try {
     if (game === 'magic') {

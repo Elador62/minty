@@ -7,10 +7,10 @@ export function slugify(text: string): string {
     .replace(/[^a-zA-Z0-9-]/g, '');    // remove other special chars but keep case
 }
 
-export function getCardMarketUrl(item: { game: string, card_name: string, expansion?: string, is_foil?: boolean }): string {
+export function getCardMarketUrl(item: { game: string, card_name: string, card_name_en?: string, expansion?: string, is_foil?: boolean }): string {
   const gamePath = item.game === 'pokemon' ? 'Pokemon' : 'Magic';
   const setName = slugify(item.expansion || 'Unknown-Set');
-  const cardName = slugify(item.card_name);
+  const cardName = slugify(item.card_name_en || item.card_name);
   const foil = item.is_foil ? 'Y' : 'N';
 
   return `https://www.cardmarket.com/fr/${gamePath}/Products/Singles/${setName}/${cardName}?isFoil=${foil}`;

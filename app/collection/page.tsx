@@ -59,6 +59,7 @@ import { Label } from "@/components/ui/label";
 import { getCardThumbnail } from "@/lib/cardmarket/images";
 import { getCardPrice } from "@/lib/cardmarket/prices";
 import { getCardMarketUrl } from "@/lib/cardmarket/urls";
+import { getEnglishName } from "@/lib/cardmarket/search";
 
 function CardDetailsContent({ item, history }: { item: any, history: any[] }) {
   if (!item) return null;
@@ -158,6 +159,7 @@ export default function CollectionPage() {
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [newItem, setNewItem] = useState({
     card_name: '',
+    card_name_en: '',
     expansion: '',
     game: 'magic',
     listed_price: '',
@@ -168,6 +170,8 @@ export default function CollectionPage() {
     color: '',
     card_type: '',
   });
+  const [searchResult, setSearchResult] = useState<any>(null);
+  const [isSearchingCard, setIsSearchingCard] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const supabase = createClient();
@@ -244,7 +248,7 @@ export default function CollectionPage() {
 
     for (const item of items) {
       try {
-        const price = await getCardPrice(item.card_name, item.game, item.expansion, item.is_foil);
+        const price = await getCardPrice(item.card_name, item.game, item.expansion, item.is_foil, item.card_name_en);
         totalChecked++;
         if (price !== null) {
           const { error } = await supabase
@@ -272,16 +276,33 @@ export default function CollectionPage() {
     fetchInventory();
   };
 
+  const handleSearchCard = async () => {
+    if (!newItem.card_name) return;
+    setIsSearchingCard(true);
+    const result = await getEnglishName(newItem.card_name, newItem.game, newItem.expansion);
+    if (result) {
+      setSearchResult(result);
+      toast({ title: "Carte trouvée", description: `Rapprochement avec : ${result.name_en} (${result.expansion_en})` });
+    } else {
+      setSearchResult(null);
+      toast({ title: "Non trouvé", description: "Impossible de trouver une correspondance exacte.", variant: "destructive" });
+    }
+    setIsSearchingCard(false);
+  };
+
   const handleAddItem = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const imageUrl = await getCardThumbnail(newItem.card_name, newItem.game);
+    const finalNameEn = searchResult?.name_en || newItem.card_name_en || newItem.card_name;
+    const finalExpansion = searchResult?.expansion_en || newItem.expansion;
+    const imageUrl = await getCardThumbnail(finalNameEn, newItem.game);
 
     const { error } = await supabase.from('inventory_items').insert([{
       user_id: user.id,
       card_name: newItem.card_name,
-      expansion: newItem.expansion,
+      card_name_en: finalNameEn,
+      expansion: finalExpansion,
       game: newItem.game,
       listed_price: parseFloat(newItem.listed_price) || 0,
       quantity: parseInt(newItem.quantity) || 1,
@@ -292,7 +313,7 @@ export default function CollectionPage() {
       card_type: newItem.card_type,
       image_url: imageUrl,
       is_foil: (newItem as any).is_foil || false,
-      last_market_price: parseFloat(newItem.listed_price) || 0 // Initialiser avec le prix listé
+      last_market_price: parseFloat(newItem.listed_price) || 0
     }]);
 
     if (error) {
@@ -300,8 +321,10 @@ export default function CollectionPage() {
     } else {
       toast({ title: "Carte ajoutée", description: `${newItem.card_name} a été ajouté à votre collection.` });
       setIsAddModalOpen(false);
+      setSearchResult(null);
       setNewItem({
         card_name: '',
+        card_name_en: '',
         expansion: '',
         game: 'magic',
         listed_price: '',
@@ -356,18 +379,27 @@ export default function CollectionPage() {
           game = 'pokemon';
         }
 
-        // Récupération de l'illustration
+        // Rapprochement API pour le nom anglais et l'illustration
+        let nameEn = name;
+        let expansionEn = expansion;
         let imageUrl = null;
+
         try {
-          imageUrl = await getCardThumbnail(name, game);
+          const match = await getEnglishName(name, game, expansion);
+          if (match) {
+            nameEn = match.name_en;
+            expansionEn = match.expansion_en || expansion;
+          }
+          imageUrl = await getCardThumbnail(nameEn, game);
         } catch (err) {
-          console.error("Erreur fetch image import:", err);
+          console.error("Erreur rapprochement import:", err);
         }
 
         itemsToInsert.push({
           user_id: user.id,
           card_name: name,
-          expansion: expansion,
+          card_name_en: nameEn,
+          expansion: expansionEn,
           game: game,
           listed_price: price,
           last_market_price: price,
@@ -1012,8 +1044,22 @@ export default function CollectionPage() {
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="name" className="text-right">Nom</Label>
-              <Input id="name" value={newItem.card_name} onChange={e => setNewItem({...newItem, card_name: e.target.value})} className="col-span-3" />
+              <div className="col-span-3 flex gap-2">
+                <Input id="name" value={newItem.card_name} onChange={e => setNewItem({...newItem, card_name: e.target.value})} placeholder="Nom (FR ou EN)" />
+                <Button variant="outline" size="icon" onClick={handleSearchCard} disabled={isSearchingCard} title="Vérifier correspondance API">
+                   <Search className={`h-4 w-4 ${isSearchingCard ? 'animate-spin' : ''}`} />
+                </Button>
+              </div>
             </div>
+            {searchResult && (
+              <div className="grid grid-cols-4 items-center gap-4 bg-green-50 p-2 rounded border border-green-200">
+                <div className="text-[10px] uppercase font-bold text-green-700 text-right">Match API</div>
+                <div className="col-span-3 text-xs text-green-700">
+                  <strong>{searchResult.name_en}</strong><br/>
+                  <span className="opacity-80">{searchResult.expansion_en}</span>
+                </div>
+              </div>
+            )}
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="game" className="text-right">TCG</Label>
               <Select value={newItem.game} onValueChange={v => setNewItem({...newItem, game: v})}>
