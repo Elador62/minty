@@ -79,11 +79,13 @@ Avant de déployer le code, assurez-vous que votre instance Supabase de producti
 4. Cliquez sur **Deploy**.
 
 ### 3. Configuration de l'Authentification
-Vercel génère une URL de production (ex: `https://votre-app.vercel.app`). Vous devez impérativement configurer cette URL dans Supabase pour permettre l'inscription :
+Vercel génère des URLs dynamiques (ex: `minty-green.vercel.app`). Supabase est très strict sur les redirections.
 1. Allez dans **Authentication > URL Configuration**.
-2. Dans **Site URL**, mettez l'URL exacte de votre application Vercel (ex: `https://minty-app.vercel.app`).
-3. Dans **Redirect URLs**, ajoutez explicitement l'URL de callback : `https://minty-app.vercel.app/api/auth/callback`.
-4. **Note :** Sans cette configuration, vous recevrez une erreur "Invalid path specified in request URL" lors de l'inscription.
+2. Dans **Site URL**, mettez l'URL principale : `https://minty-green.vercel.app`.
+3. Dans **Redirect URLs**, ajoutez **obligatoirement** les deux types suivants :
+   - L'URL exacte : `https://minty-green.vercel.app/api/auth/callback`
+   - Un wildcard pour supporter les déploiements Vercel : `https://*-green.vercel.app/**` (en remplaçant `green` par votre suffixe) ou plus simplement `https://*.vercel.app/**` pour les tests.
+4. **Attention :** Si l'URL dans la barre de votre navigateur ne correspond pas EXACTEMENT (caractère par caractère) à une URL autorisée dans Supabase, l'erreur "Invalid path specified" apparaîtra.
 
 ### 4. Optimisation (Optionnel)
 - Pour des performances optimales avec Supabase, il est recommandé d'activer le **Connection Pooling** (via PgBouncer) dans les paramètres de base de données si vous prévoyez un trafic important.

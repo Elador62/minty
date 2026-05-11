@@ -21,14 +21,18 @@ export default function RegisterPage() {
     e.preventDefault();
     setIsLoading(true);
 
-    // On récupère l'origine de manière sûre pour Vercel
-    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    // On construit l'URL de redirection de manière robuste
+    // On enlève le trailing slash éventuel de l'origin pour éviter les doublons
+    const origin = typeof window !== 'undefined' ? window.location.origin.replace(/\/$/, '') : '';
+    const redirectTo = `${origin}/api/auth/callback`;
+
+    console.log("Tentative d'inscription avec redirection vers:", redirectTo);
 
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: `${origin}/api/auth/callback`,
+        emailRedirectTo: redirectTo,
       },
     });
 
