@@ -58,6 +58,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { getCardThumbnail } from "@/lib/cardmarket/images";
 import { getCardPrice } from "@/lib/cardmarket/prices";
+import { getCardMarketUrl } from "@/lib/cardmarket/urls";
 
 function CardDetailsContent({ item, history }: { item: any, history: any[] }) {
   if (!item) return null;
@@ -125,6 +126,7 @@ function CardDetailsContent({ item, history }: { item: any, history: any[] }) {
 
 export default function CollectionPage() {
   const [items, setItems] = useState<any[]>([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [allStorages, setAllStorages] = useState<string[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -393,21 +395,40 @@ export default function CollectionPage() {
     reader.readAsText(file);
   };
 
-  const handleArchiveItem = async (id: string, archive: boolean = true) => {
+  const handleArchiveItem = async (ids: string | string[], archive: boolean = true) => {
+    const idsToUpdate = Array.isArray(ids) ? ids : [ids];
+
     const { error } = await supabase
       .from('inventory_items')
       .update({ is_archived: archive })
-      .eq('id', id);
+      .in('id', idsToUpdate);
 
     if (error) {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
     } else {
       toast({
-        title: archive ? "Carte archivée" : "Carte restaurée",
-        description: archive ? "La carte a été déplacée vers la corbeille." : "La carte a été restaurée dans votre collection."
+        title: idsToUpdate.length > 1 ? "Cartes traitées" : (archive ? "Carte archivée" : "Carte restaurée"),
+        description: idsToUpdate.length > 1
+          ? `${idsToUpdate.length} cartes ont été ${archive ? 'archivées' : 'restaurées'}.`
+          : (archive ? "La carte a été déplacée vers la corbeille." : "La carte a été restaurée dans votre collection.")
       });
+      setSelectedIds([]);
       fetchInventory();
     }
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === items.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(items.map(it => it.id));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
   };
 
   const fetchOrderHistory = async (item: any) => {
@@ -513,9 +534,33 @@ export default function CollectionPage() {
   return (
     <div className="container mx-auto py-10 space-y-8">
       <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Ma Collection</h1>
-          <p className="text-muted-foreground text-sm">Gérez votre stock et suivez les prix du marché.</p>
+        <div className="flex items-center gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Ma Collection</h1>
+            <p className="text-muted-foreground text-sm">Gérez votre stock et suivez les prix du marché.</p>
+          </div>
+          {selectedIds.length > 0 && (
+            <div className="flex items-center gap-2 bg-slate-100 px-3 py-2 rounded-lg border border-slate-200 animate-in fade-in slide-in-from-left-4">
+              <span className="text-xs font-bold">{selectedIds.length} sélectionnée(s)</span>
+              <Button
+                variant="destructive"
+                size="sm"
+                className="h-8"
+                onClick={() => handleArchiveItem(selectedIds, !filters.showArchived)}
+              >
+                {filters.showArchived ? <Undo className="h-4 w-4 mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
+                {filters.showArchived ? 'Restaurer' : 'Archiver'}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8"
+                onClick={() => setSelectedIds([])}
+              >
+                Annuler
+              </Button>
+            </div>
+          )}
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => setIsImportModalOpen(true)}>
@@ -628,6 +673,12 @@ export default function CollectionPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead className="w-[40px]">
+                          <Checkbox
+                            checked={items.length > 0 && selectedIds.length === items.length}
+                            onCheckedChange={toggleSelectAll}
+                          />
+                        </TableHead>
                         <TableHead className="w-[80px]">Image</TableHead>
                         <TableHead className="cursor-pointer hover:text-primary" onClick={() => handleSort('card_name')}>
                           Nom {sortBy === 'card_name' && (sortOrder === 'asc' ? '↑' : '↓')}
@@ -656,7 +707,13 @@ export default function CollectionPage() {
                         const isAlert = diff >= 10;
 
                         return (
-                          <TableRow key={item.id}>
+                          <TableRow key={item.id} className={selectedIds.includes(item.id) ? "bg-slate-50" : ""}>
+                            <TableCell>
+                              <Checkbox
+                                checked={selectedIds.includes(item.id)}
+                                onCheckedChange={() => toggleSelect(item.id)}
+                              />
+                            </TableCell>
                             <TableCell>
                               <div className="w-10 h-14 bg-slate-100 rounded overflow-hidden">
                                 {item.image_url && <img src={item.image_url} alt="" className="w-full h-full object-cover" />}
@@ -691,7 +748,7 @@ export default function CollectionPage() {
                                <div className="flex justify-end gap-1">
                                   <Button variant="ghost" size="sm" asChild title="Voir sur CardMarket">
                                     <a
-                                      href={item.cardmarket_url || `https://www.cardmarket.com/fr/${item.game === 'pokemon' ? 'Pokemon' : 'Magic'}/Products/Search?searchString=${encodeURIComponent(`${item.card_name} ${item.expansion || ''}`.trim())}`}
+                                      href={getCardMarketUrl(item)}
                                       target="_blank"
                                       rel="noopener noreferrer"
                                     >
@@ -741,6 +798,13 @@ export default function CollectionPage() {
                     <Card key={item.id} className="overflow-hidden group">
                       <div className="aspect-[3/4] relative bg-slate-100">
                         {item.image_url && <img src={item.image_url} alt="" className="w-full h-full object-contain" />}
+                        <div className="absolute top-2 left-2">
+                          <Checkbox
+                            checked={selectedIds.includes(item.id)}
+                            onCheckedChange={() => toggleSelect(item.id)}
+                            className="bg-white/90 data-[state=checked]:bg-primary"
+                          />
+                        </div>
                         <div className="absolute top-2 right-2 flex flex-col gap-1 items-end">
                           <Badge className={diff > 0 ? 'bg-green-600' : 'bg-red-600'}>
                             {diff > 0 ? '+' : ''}{diff.toFixed(0)}%
@@ -762,7 +826,7 @@ export default function CollectionPage() {
                         </div>
                         <div className="mt-2 pt-2 border-t flex justify-between items-center">
                            <Button variant="ghost" size="sm" className="h-7 px-2 text-[10px]" asChild>
-                              <a href={item.cardmarket_url || `https://www.cardmarket.com/fr/${item.game === 'pokemon' ? 'Pokemon' : 'Magic'}/Products/Search?searchString=${encodeURIComponent(`${item.card_name} ${item.expansion || ''}`.trim())}`} target="_blank" rel="noopener noreferrer">
+                              <a href={getCardMarketUrl(item)} target="_blank" rel="noopener noreferrer">
                                 CM <ExternalLink className="ml-1 h-3 w-3" />
                               </a>
                            </Button>

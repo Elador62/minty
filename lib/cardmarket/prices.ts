@@ -4,10 +4,16 @@ export async function getCardPrice(name: string, game: string, expansion?: strin
 
   try {
     if (game === 'magic') {
-      // Format spécifique demandé : !"Nom" set:code
-      const searchQuery = expansion
-        ? `!"${cleanName}" set:${expansion}`
-        : `!"${cleanName}"`;
+      // Format recommandé par l'utilisateur : !"Nom" set:code
+      // On gère intelligemment si l'édition est un code ou un nom complet
+      let searchQuery = `!"${cleanName}"`;
+      if (expansion) {
+        if (expansion.length <= 5) {
+          searchQuery += ` set:${expansion}`;
+        } else {
+          searchQuery += ` set:"${expansion}"`;
+        }
+      }
 
       const url = `https://api.scryfall.com/cards/search?q=${encodeURIComponent(searchQuery)}`;
       const response = await fetch(url);
@@ -15,23 +21,11 @@ export async function getCardPrice(name: string, game: string, expansion?: strin
 
       if (data.data && data.data.length > 0) {
         const p = data.data[0].prices;
+        // Extraction du prix avec priorité au type (Foil/Normal)
         if (isFoil) {
-          return parseFloat(p.eur_foil || p.eur || p.usd_foil || p.usd) || null;
+          return parseFloat(p.eur_foil) || parseFloat(p.eur) || parseFloat(p.usd_foil) || parseFloat(p.usd) || null;
         }
-        return parseFloat(p.eur || p.eur_foil || p.usd || p.usd_foil) || null;
-      }
-
-      // Fallback si l'édition n'est pas un code (recherche par nom d'édition)
-      if (expansion && expansion.length > 5) {
-        const fallbackQuery = `!"${cleanName}" set:"${expansion}"`;
-        const fallbackUrl = `https://api.scryfall.com/cards/search?q=${encodeURIComponent(fallbackQuery)}`;
-        const fallbackRes = await fetch(fallbackUrl);
-        const fallbackData = await fallbackRes.json();
-        if (fallbackData.data && fallbackData.data.length > 0) {
-          const p = fallbackData.data[0].prices;
-          if (isFoil) return parseFloat(p.eur_foil || p.eur) || null;
-          return parseFloat(p.eur || p.eur_foil) || null;
-        }
+        return parseFloat(p.eur) || parseFloat(p.eur_foil) || parseFloat(p.usd) || parseFloat(p.usd_foil) || null;
       }
 
     } else if (game === 'pokemon') {
