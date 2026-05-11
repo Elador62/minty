@@ -21,8 +21,22 @@ import {
   Upload,
   ExternalLink,
   Search,
-  Box
+  Box,
+  Trash2,
+  Undo,
+  ChevronLeft,
+  ChevronRight,
+  MoreVertical,
+  Edit,
+  Info
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
@@ -34,28 +48,118 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { Label } from "@/components/ui/label";
 import { getCardThumbnail } from "@/lib/cardmarket/images";
+import { getCardPrice } from "@/lib/cardmarket/prices";
+import { getCardMarketUrl } from "@/lib/cardmarket/urls";
+import { getEnglishName } from "@/lib/cardmarket/search";
+
+function CardDetailsContent({ item, history }: { item: any, history: any[] }) {
+  if (!item) return null;
+
+  return (
+    <div className="py-6 space-y-8">
+      <div className="flex gap-6">
+        <div className="w-40 h-56 bg-slate-100 rounded-lg overflow-hidden flex-shrink-0">
+          {item.image_url && <img src={item.image_url} alt="" className="w-full h-full object-cover" />}
+        </div>
+        <div className="space-y-4 flex-1">
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div>
+              <p className="text-muted-foreground">TCG</p>
+              <p className="font-bold capitalize">{item.game}</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground">Édition</p>
+              <p className="font-bold">{item.expansion}</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground">État / Langue</p>
+              <p className="font-bold">{item.condition} / {item.language}</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground">Stockage</p>
+              <p className="font-bold">{item.storage_location || 'Non défini'}</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground">Prix Listé</p>
+              <p className="font-bold text-lg">{Number(item.listed_price).toFixed(2)} €</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground">Prix Marché</p>
+              <p className="font-bold text-lg text-green-600">{Number(item.last_market_price).toFixed(2)} €</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        <h4 className="font-bold border-b pb-2">Historique des Commandes</h4>
+        {history.length === 0 ? (
+          <p className="text-sm text-muted-foreground italic">Aucune commande trouvée pour cette configuration exacte.</p>
+        ) : (
+          <div className="space-y-3">
+            {history.map((h) => (
+              <div key={h.id} className="flex justify-between items-center p-3 bg-slate-50 rounded-lg border">
+                <div className="space-y-1">
+                  <p className="text-sm font-bold">{h.orders.buyer_name}</p>
+                  <p className="text-[10px] text-muted-foreground">#{h.orders.external_order_id} • {new Date(h.orders.created_at).toLocaleDateString()}</p>
+                </div>
+                <div className="text-right">
+                  <p className="font-bold">{Number(h.price).toFixed(2)} €</p>
+                  <Badge variant="outline" className="text-[10px] h-5">{h.orders.status}</Badge>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function CollectionPage() {
   const [items, setItems] = useState<any[]>([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [allStorages, setAllStorages] = useState<string[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
-  const [sortBy, setSortBy] = useState<'name' | 'price' | 'diff' | 'tcg' | 'quantity'>('name');
+  const [sortBy, setSortBy] = useState<string>('card_name');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [groupBy, setGroupBy] = useState<'none' | 'tcg' | 'expansion' | 'storage_location'>('none');
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
+
   const initialFilters = {
     search: '',
     tcg: 'all',
     minPrice: '',
     maxPrice: '',
     storage: 'all',
+    showArchived: false,
   };
   const [filters, setFilters] = useState(initialFilters);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [orderHistory, setOrderHistory] = useState<any[]>([]);
+  const [userSettings, setUserSettings] = useState<any>(null);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [newItem, setNewItem] = useState({
     card_name: '',
+    card_name_en: '',
     expansion: '',
     game: 'magic',
     listed_price: '',
@@ -66,44 +170,146 @@ export default function CollectionPage() {
     color: '',
     card_type: '',
   });
+  const [searchResult, setSearchResult] = useState<any>(null);
+  const [isSearchingCard, setIsSearchingCard] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const supabase = createClient();
   const { toast } = useToast();
 
-  const fetchInventory = async () => {
-    const { data } = await supabase
-      .from('inventory_items')
-      .select('*')
-      .order('card_name');
+  const fetchSettings = async () => {
+    const { data } = await supabase.from('user_settings').select('*').single();
+    if (data) setUserSettings(data);
+  };
 
-    setItems(data || []);
+  const fetchInventory = async () => {
+    setIsLoading(true);
+
+    // Fetch all storage locations for the filter
+    const { data: storageData } = await supabase
+      .from('inventory_items')
+      .select('storage_location')
+      .not('storage_location', 'is', null);
+
+    if (storageData) {
+      const uniqueStorages = Array.from(new Set(storageData.map((s: any) => s.storage_location)))
+        .filter(s => typeof s === 'string' && s.trim() !== '');
+      setAllStorages(uniqueStorages as string[]);
+    }
+
+    let query = supabase
+      .from('inventory_items')
+      .select('*', { count: 'exact' });
+
+    // Filtres
+    if (filters.search) query = query.ilike('card_name', `%${filters.search}%`);
+    if (filters.tcg !== 'all') query = query.eq('game', filters.tcg);
+    if (filters.storage !== 'all') query = query.eq('storage_location', filters.storage);
+    if (filters.minPrice) query = query.gte('listed_price', parseFloat(filters.minPrice));
+    if (filters.maxPrice) query = query.lte('listed_price', parseFloat(filters.maxPrice));
+
+    query = query.eq('is_archived', filters.showArchived);
+
+    // Tri
+    query = query.order(sortBy, { ascending: sortOrder === 'asc' });
+
+    // Pagination
+    const from = (currentPage - 1) * pageSize;
+    const to = from + pageSize - 1;
+    query = query.range(from, to);
+
+    const { data, count, error } = await query;
+
+    if (error) {
+      toast({ title: "Erreur", description: error.message, variant: "destructive" });
+    } else {
+      setItems(data || []);
+      setTotalCount(count || 0);
+    }
     setIsLoading(false);
   };
 
   useEffect(() => {
+    fetchSettings();
     fetchInventory();
-  }, []);
+  }, [currentPage, pageSize, filters, sortBy, sortOrder]);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters, sortBy, sortOrder, pageSize]);
 
   const handleUpdatePrices = async () => {
     setIsRefreshing(true);
-    // Simulation d'une mise à jour de prix
-    setTimeout(() => {
-      setIsRefreshing(false);
-      toast({ title: "Prix mis à jour", description: "Les données du marché ont été actualisées." });
-    }, 1500);
+    let updatedCount = 0;
+    let totalChecked = 0;
+
+    toast({ title: "Mise à jour lancée", description: `Analyse de ${items.length} cartes...` });
+
+    for (const item of items) {
+      try {
+        const price = await getCardPrice(item.card_name, item.game, item.expansion, item.is_foil, item.card_name_en);
+        totalChecked++;
+        if (price !== null) {
+          const { error } = await supabase
+            .from('inventory_items')
+            .update({
+              last_market_price: price,
+              updated_at: new Date().toISOString() // On force l'update du timestamp si possible
+            })
+            .eq('id', item.id);
+
+          if (!error && price !== item.last_market_price) {
+            updatedCount++;
+          }
+        }
+      } catch (err) {
+        console.error(`Erreur maj prix pour ${item.card_name}:`, err);
+      }
+    }
+
+    setIsRefreshing(false);
+    toast({
+      title: "Mise à jour terminée",
+      description: `${updatedCount} prix modifiés sur ${totalChecked} cartes vérifiées.`
+    });
+    fetchInventory();
+  };
+
+  const handleSearchCard = async () => {
+    if (!newItem.card_name) return;
+    setIsSearchingCard(true);
+    const result = await getEnglishName(newItem.card_name, newItem.game, newItem.expansion);
+    if (result) {
+      setSearchResult(result);
+      setNewItem({
+        ...newItem,
+        card_name_en: result.name_en,
+        expansion: result.expansion_en,
+        color: result.color || '',
+        card_type: result.card_type || '',
+      });
+      toast({ title: "Carte trouvée", description: `Rapprochement avec : ${result.name_en} (${result.expansion_en})` });
+    } else {
+      setSearchResult(null);
+      toast({ title: "Non trouvé", description: "Impossible de trouver une correspondance exacte.", variant: "destructive" });
+    }
+    setIsSearchingCard(false);
   };
 
   const handleAddItem = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const imageUrl = await getCardThumbnail(newItem.card_name, newItem.game);
+    const finalNameEn = searchResult?.name_en || newItem.card_name_en || newItem.card_name;
+    const finalExpansion = searchResult?.expansion_en || newItem.expansion;
+    const imageUrl = await getCardThumbnail(finalNameEn, newItem.game);
 
     const { error } = await supabase.from('inventory_items').insert([{
       user_id: user.id,
       card_name: newItem.card_name,
-      expansion: newItem.expansion,
+      card_name_en: finalNameEn,
+      expansion: finalExpansion,
       game: newItem.game,
       listed_price: parseFloat(newItem.listed_price) || 0,
       quantity: parseInt(newItem.quantity) || 1,
@@ -113,7 +319,8 @@ export default function CollectionPage() {
       color: newItem.color,
       card_type: newItem.card_type,
       image_url: imageUrl,
-      last_market_price: parseFloat(newItem.listed_price) || 0 // Initialiser avec le prix listé
+      is_foil: (newItem as any).is_foil || false,
+      last_market_price: parseFloat(newItem.listed_price) || 0
     }]);
 
     if (error) {
@@ -121,8 +328,10 @@ export default function CollectionPage() {
     } else {
       toast({ title: "Carte ajoutée", description: `${newItem.card_name} a été ajouté à votre collection.` });
       setIsAddModalOpen(false);
+      setSearchResult(null);
       setNewItem({
         card_name: '',
+        card_name_en: '',
         expansion: '',
         game: 'magic',
         listed_price: '',
@@ -177,18 +386,27 @@ export default function CollectionPage() {
           game = 'pokemon';
         }
 
-        // Récupération de l'illustration
+        // Rapprochement API pour le nom anglais et l'illustration
+        let nameEn = name;
+        let expansionEn = expansion;
         let imageUrl = null;
+
         try {
-          imageUrl = await getCardThumbnail(name, game);
+          const match = await getEnglishName(name, game, expansion);
+          if (match) {
+            nameEn = match.name_en;
+            expansionEn = match.expansion_en || expansion;
+          }
+          imageUrl = await getCardThumbnail(nameEn, game);
         } catch (err) {
-          console.error("Erreur fetch image import:", err);
+          console.error("Erreur rapprochement import:", err);
         }
 
         itemsToInsert.push({
           user_id: user.id,
           card_name: name,
-          expansion: expansion,
+          card_name_en: nameEn,
+          expansion: expansionEn,
           game: game,
           listed_price: price,
           last_market_price: price,
@@ -216,34 +434,125 @@ export default function CollectionPage() {
     reader.readAsText(file);
   };
 
-  const getFilteredAndSortedItems = () => {
-    let filtered = items.filter(it => {
-      const matchSearch = !filters.search || it.card_name.toLowerCase().includes(filters.search.toLowerCase());
-      const matchTCG = filters.tcg === 'all' || (it.game && it.game.toLowerCase() === filters.tcg.toLowerCase());
-      const matchPrice = (!filters.minPrice || Number(it.listed_price) >= Number(filters.minPrice)) &&
-                         (!filters.maxPrice || Number(it.listed_price) <= Number(filters.maxPrice));
-      const matchStorage = filters.storage === 'all' || it.storage_location === filters.storage;
-      return matchSearch && matchTCG && matchPrice && matchStorage;
-    });
+  const handleArchiveItem = async (ids: string | string[], archive: boolean = true) => {
+    const idsToUpdate = Array.isArray(ids) ? ids : [ids];
 
-    return [...filtered].sort((a, b) => {
-      if (sortBy === 'name') return a.card_name.localeCompare(b.card_name);
-      if (sortBy === 'price') return Number(b.listed_price) - Number(a.listed_price);
-      if (sortBy === 'quantity') return Number(b.quantity) - Number(a.quantity);
-      if (sortBy === 'diff') {
-        const getDiff = (it: any) => it.listed_price > 0 ? ((Number(it.last_market_price) - Number(it.listed_price)) / Number(it.listed_price)) * 100 : 0;
-        return getDiff(b) - getDiff(a);
-      }
-      if (sortBy === 'tcg') return (a.game || '').localeCompare(b.game || '');
-      return 0;
-    });
+    const { error } = await supabase
+      .from('inventory_items')
+      .update({ is_archived: archive })
+      .in('id', idsToUpdate);
+
+    if (error) {
+      toast({ title: "Erreur", description: error.message, variant: "destructive" });
+    } else {
+      toast({
+        title: idsToUpdate.length > 1 ? "Cartes traitées" : (archive ? "Carte archivée" : "Carte restaurée"),
+        description: idsToUpdate.length > 1
+          ? `${idsToUpdate.length} cartes ont été ${archive ? 'archivées' : 'restaurées'}.`
+          : (archive ? "La carte a été déplacée vers la corbeille." : "La carte a été restaurée dans votre collection.")
+      });
+      setSelectedIds([]);
+      fetchInventory();
+    }
   };
 
-  if (isLoading) return <div className="container mx-auto py-10">Chargement de la collection...</div>;
+  const toggleSelectAll = () => {
+    if (selectedIds.length === items.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(items.map(it => it.id));
+    }
+  };
 
-  const processedItems = getFilteredAndSortedItems();
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
 
-  const storages = Array.from(new Set(items.map(it => it.storage_location).filter(Boolean)));
+  const fetchOrderHistory = async (item: any) => {
+    if (!item) return;
+    const { data, error } = await supabase
+      .from('order_items')
+      .select('*, orders(external_order_id, buyer_name, status, created_at)')
+      .eq('card_name', item.card_name)
+      .eq('expansion', item.expansion)
+      .eq('condition', item.condition)
+      .eq('language', item.language)
+      .order('created_at', { ascending: false });
+
+    if (!error) {
+      setOrderHistory(data || []);
+    }
+  };
+
+  const handleShowDetails = (item: any) => {
+    setSelectedItem(item);
+    fetchOrderHistory(item);
+    setIsDetailOpen(true);
+  };
+
+  const handleEditItem = (item: any) => {
+    setSelectedItem(item);
+    setNewItem({
+      card_name: item.card_name,
+      expansion: item.expansion || '',
+      game: item.game || 'magic',
+      listed_price: item.listed_price.toString(),
+      quantity: item.quantity.toString(),
+      storage_location: item.storage_location || '',
+      condition: item.condition || 'NM',
+      language: item.language || 'Français',
+      color: item.color || '',
+      card_type: item.card_type || '',
+      is_foil: item.is_foil || false,
+    } as any);
+    setIsEditModalOpen(true);
+  };
+
+  const handleUpdateItem = async () => {
+    if (!selectedItem) return;
+
+    const { error } = await supabase
+      .from('inventory_items')
+      .update({
+        card_name: newItem.card_name,
+        expansion: newItem.expansion,
+        game: newItem.game,
+        listed_price: parseFloat(newItem.listed_price) || 0,
+        quantity: parseInt(newItem.quantity) || 0,
+        storage_location: newItem.storage_location,
+        condition: newItem.condition,
+        language: newItem.language,
+        color: newItem.color,
+        card_type: newItem.card_type,
+        is_foil: (newItem as any).is_foil || false,
+      })
+      .eq('id', selectedItem.id);
+
+    if (error) {
+      toast({ title: "Erreur", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Carte modifiée", description: "Les modifications ont été enregistrées." });
+      setIsEditModalOpen(false);
+      fetchInventory();
+    }
+  };
+
+  const handleSort = (field: string) => {
+    if (sortBy === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(field);
+      setSortOrder('desc');
+    }
+  };
+
+  if (isLoading && items.length === 0) return <div className="container mx-auto py-10">Chargement de la collection...</div>;
+
+  const processedItems = items;
+
+  const storages = allStorages;
 
   // Groupement
   const groups: Record<string, any[]> = {};
@@ -264,9 +573,33 @@ export default function CollectionPage() {
   return (
     <div className="container mx-auto py-10 space-y-8">
       <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Ma Collection</h1>
-          <p className="text-muted-foreground text-sm">Gérez votre stock et suivez les prix du marché.</p>
+        <div className="flex items-center gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Ma Collection</h1>
+            <p className="text-muted-foreground text-sm">Gérez votre stock et suivez les prix du marché.</p>
+          </div>
+          {selectedIds.length > 0 && (
+            <div className="flex items-center gap-2 bg-slate-100 px-3 py-2 rounded-lg border border-slate-200 animate-in fade-in slide-in-from-left-4">
+              <span className="text-xs font-bold">{selectedIds.length} sélectionnée(s)</span>
+              <Button
+                variant="destructive"
+                size="sm"
+                className="h-8"
+                onClick={() => handleArchiveItem(selectedIds, !filters.showArchived)}
+              >
+                {filters.showArchived ? <Undo className="h-4 w-4 mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
+                {filters.showArchived ? 'Restaurer' : 'Archiver'}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8"
+                onClick={() => setSelectedIds([])}
+              >
+                Annuler
+              </Button>
+            </div>
+          )}
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => setIsImportModalOpen(true)}>
@@ -275,11 +608,15 @@ export default function CollectionPage() {
           <Button variant="outline" onClick={() => setIsAddModalOpen(true)}>
              <Plus className="h-4 w-4 mr-2" /> Ajouter
           </Button>
+          <Button variant="outline" onClick={() => setFilters({...filters, showArchived: !filters.showArchived})}>
+             {filters.showArchived ? <ListIcon className="h-4 w-4 mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
+             {filters.showArchived ? 'Voir Collection' : 'Voir Corbeille'}
+          </Button>
           <Button variant="outline" onClick={() => setViewMode(viewMode === 'table' ? 'cards' : 'table')}>
              {viewMode === 'table' ? <LayoutDashboard className="h-4 w-4 mr-2" /> : <ListIcon className="h-4 w-4 mr-2" />}
              {viewMode === 'table' ? 'Mode Cartes' : 'Mode Liste'}
           </Button>
-          <Button onClick={handleUpdatePrices} disabled={isRefreshing}>
+          <Button onClick={handleUpdatePrices} disabled={isRefreshing || items.length === 0}>
             <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} /> Actualiser Prix
           </Button>
         </div>
@@ -314,7 +651,11 @@ export default function CollectionPage() {
                 <SelectTrigger className="bg-white h-9"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Tous les lieux</SelectItem>
-                  {storages.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                  {storages.map(s => (
+                    <SelectItem key={s} value={s || "unnamed"}>
+                      {s}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -327,15 +668,14 @@ export default function CollectionPage() {
             </div>
             <div className="flex items-end gap-2 pr-4">
                <div className="flex-1 space-y-1">
-                  <label className="text-[10px] font-bold uppercase text-muted-foreground">Trier</label>
-                  <Select value={sortBy} onValueChange={(v: any) => setSortBy(v)}>
+                  <label className="text-[10px] font-bold uppercase text-muted-foreground">Affichage</label>
+                  <Select value={pageSize.toString()} onValueChange={(v) => setPageSize(parseInt(v))}>
                     <SelectTrigger className="bg-white h-9"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="name">Nom (A-Z)</SelectItem>
-                      <SelectItem value="price">Prix</SelectItem>
-                      <SelectItem value="quantity">Quantité</SelectItem>
-                      <SelectItem value="diff">Opportunité (%)</SelectItem>
-                      <SelectItem value="tcg">TCG</SelectItem>
+                      <SelectItem value="25">25 / page</SelectItem>
+                      <SelectItem value="50">50 / page</SelectItem>
+                      <SelectItem value="100">100 / page</SelectItem>
+                      <SelectItem value="200">200 / page</SelectItem>
                     </SelectContent>
                   </Select>
                </div>
@@ -372,14 +712,32 @@ export default function CollectionPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead className="w-[40px]">
+                          <Checkbox
+                            checked={items.length > 0 && selectedIds.length === items.length}
+                            onCheckedChange={toggleSelectAll}
+                          />
+                        </TableHead>
                         <TableHead className="w-[80px]">Image</TableHead>
-                        <TableHead>Nom</TableHead>
-                        <TableHead>Édition</TableHead>
-                        <TableHead>Stockage</TableHead>
-                        <TableHead className="text-right">Quantité</TableHead>
-                        <TableHead className="text-right">Votre Prix</TableHead>
-                        <TableHead className="text-right">Marché (Trend)</TableHead>
-                        <TableHead className="text-right w-[100px]">Actions</TableHead>
+                        <TableHead className="cursor-pointer hover:text-primary" onClick={() => handleSort('card_name')}>
+                          Nom {sortBy === 'card_name' && (sortOrder === 'asc' ? '↑' : '↓')}
+                        </TableHead>
+                        <TableHead className="cursor-pointer hover:text-primary" onClick={() => handleSort('expansion')}>
+                          Édition {sortBy === 'expansion' && (sortOrder === 'asc' ? '↑' : '↓')}
+                        </TableHead>
+                        <TableHead className="cursor-pointer hover:text-primary" onClick={() => handleSort('storage_location')}>
+                          Stockage {sortBy === 'storage_location' && (sortOrder === 'asc' ? '↑' : '↓')}
+                        </TableHead>
+                        <TableHead className="text-right cursor-pointer hover:text-primary" onClick={() => handleSort('quantity')}>
+                          Qté {sortBy === 'quantity' && (sortOrder === 'asc' ? '↑' : '↓')}
+                        </TableHead>
+                        <TableHead className="text-right cursor-pointer hover:text-primary" onClick={() => handleSort('listed_price')}>
+                          Votre Prix {sortBy === 'listed_price' && (sortOrder === 'asc' ? '↑' : '↓')}
+                        </TableHead>
+                        <TableHead className="text-right cursor-pointer hover:text-primary" onClick={() => handleSort('last_market_price')}>
+                          Marché {sortBy === 'last_market_price' && (sortOrder === 'asc' ? '↑' : '↓')}
+                        </TableHead>
+                        <TableHead className="text-right w-[120px]">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -388,7 +746,13 @@ export default function CollectionPage() {
                         const isAlert = diff >= 10;
 
                         return (
-                          <TableRow key={item.id}>
+                          <TableRow key={item.id} className={selectedIds.includes(item.id) ? "bg-slate-50" : ""}>
+                            <TableCell>
+                              <Checkbox
+                                checked={selectedIds.includes(item.id)}
+                                onCheckedChange={() => toggleSelect(item.id)}
+                              />
+                            </TableCell>
                             <TableCell>
                               <div className="w-10 h-14 bg-slate-100 rounded overflow-hidden">
                                 {item.image_url && <img src={item.image_url} alt="" className="w-full h-full object-cover" />}
@@ -420,20 +784,43 @@ export default function CollectionPage() {
                               </div>
                             </TableCell>
                             <TableCell className="text-right">
-                               {item.cardmarket_url && (
-                                 <Button variant="ghost" size="sm" asChild>
-                                   <a href={item.cardmarket_url} target="_blank" rel="noopener noreferrer">
-                                     <ExternalLink className="h-4 w-4" />
-                                   </a>
-                                 </Button>
-                               )}
-                               {!item.cardmarket_url && (
-                                 <Button variant="ghost" size="sm" asChild>
-                                   <a href={`https://www.cardmarket.com/fr/Magic/Products/Search?searchString=${encodeURIComponent(item.card_name)}`} target="_blank" rel="noopener noreferrer">
-                                     <Search className="h-4 w-4" />
-                                   </a>
-                                 </Button>
-                               )}
+                               <div className="flex justify-end gap-1">
+                                  <Button variant="ghost" size="sm" asChild title="Voir sur CardMarket">
+                                    <a
+                                      href={getCardMarketUrl(item)}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                    >
+                                      <ExternalLink className="h-4 w-4" />
+                                    </a>
+                                  </Button>
+
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button variant="ghost" size="sm">
+                                        <MoreVertical className="h-4 w-4" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      <DropdownMenuItem onClick={() => handleShowDetails(item)}>
+                                        <Info className="h-4 w-4 mr-2" /> Détails
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => handleEditItem(item)}>
+                                        <Edit className="h-4 w-4 mr-2" /> Modifier
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        className={item.is_archived ? "text-green-600" : "text-destructive"}
+                                        onClick={() => handleArchiveItem(item.id, !item.is_archived)}
+                                      >
+                                        {item.is_archived ? (
+                                          <><Undo className="h-4 w-4 mr-2" /> Restaurer</>
+                                        ) : (
+                                          <><Trash2 className="h-4 w-4 mr-2" /> Archiver</>
+                                        )}
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                               </div>
                             </TableCell>
                           </TableRow>
                         );
@@ -450,6 +837,13 @@ export default function CollectionPage() {
                     <Card key={item.id} className="overflow-hidden group">
                       <div className="aspect-[3/4] relative bg-slate-100">
                         {item.image_url && <img src={item.image_url} alt="" className="w-full h-full object-contain" />}
+                        <div className="absolute top-2 left-2">
+                          <Checkbox
+                            checked={selectedIds.includes(item.id)}
+                            onCheckedChange={() => toggleSelect(item.id)}
+                            className="bg-white/90 data-[state=checked]:bg-primary"
+                          />
+                        </div>
                         <div className="absolute top-2 right-2 flex flex-col gap-1 items-end">
                           <Badge className={diff > 0 ? 'bg-green-600' : 'bg-red-600'}>
                             {diff > 0 ? '+' : ''}{diff.toFixed(0)}%
@@ -469,12 +863,37 @@ export default function CollectionPage() {
                           <span className="text-xs font-bold">{Number(item.listed_price).toFixed(2)}€</span>
                           <span className="text-[10px] font-mono text-green-600 font-bold">{Number(item.last_market_price).toFixed(2)}€</span>
                         </div>
-                        <div className="mt-2 pt-2 border-t flex justify-center">
-                           <Button variant="ghost" size="sm" className="h-7 w-full text-[10px]" asChild>
-                              <a href={item.cardmarket_url || `https://www.cardmarket.com/fr/Magic/Products/Search?searchString=${encodeURIComponent(item.card_name)}`} target="_blank" rel="noopener noreferrer">
+                        <div className="mt-2 pt-2 border-t flex justify-between items-center">
+                           <Button variant="ghost" size="sm" className="h-7 px-2 text-[10px]" asChild>
+                              <a href={getCardMarketUrl(item)} target="_blank" rel="noopener noreferrer">
                                 CM <ExternalLink className="ml-1 h-3 w-3" />
                               </a>
                            </Button>
+                           <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
+                                  <MoreVertical className="h-3 w-3" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => handleShowDetails(item)}>
+                                  <Info className="h-3 w-3 mr-2" /> Détails
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleEditItem(item)}>
+                                  <Edit className="h-3 w-3 mr-2" /> Modifier
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  className={item.is_archived ? "text-green-600" : "text-destructive"}
+                                  onClick={() => handleArchiveItem(item.id, !item.is_archived)}
+                                >
+                                  {item.is_archived ? (
+                                    <><Undo className="h-3 w-3 mr-2" /> Restaurer</>
+                                  ) : (
+                                    <><Trash2 className="h-3 w-3 mr-2" /> Archiver</>
+                                  )}
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                           </DropdownMenu>
                         </div>
                       </CardContent>
                     </Card>
@@ -486,6 +905,142 @@ export default function CollectionPage() {
         ))}
       </div>
 
+      {/* PAGINATION */}
+      <div className="flex items-center justify-between mt-8 pb-10">
+        <p className="text-sm text-muted-foreground">
+          Affichage de {(currentPage - 1) * pageSize + 1} à {Math.min(currentPage * pageSize, totalCount)} sur {totalCount} cartes
+        </p>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+          >
+            <ChevronLeft className="h-4 w-4 mr-2" /> Précédent
+          </Button>
+          <div className="flex items-center gap-1">
+             {(() => {
+               const totalPages = Math.ceil(totalCount / pageSize);
+               let startPage = Math.max(1, currentPage - 2);
+               let endPage = Math.min(totalPages, startPage + 4);
+
+               if (endPage - startPage < 4) {
+                 startPage = Math.max(1, endPage - 4);
+               }
+
+               const pages = [];
+               for (let i = startPage; i <= endPage; i++) {
+                 pages.push(
+                   <Button
+                     key={i}
+                     variant={currentPage === i ? "default" : "outline"}
+                     size="sm"
+                     className="w-9"
+                     onClick={() => setCurrentPage(i)}
+                   >
+                     {i}
+                   </Button>
+                 );
+               }
+               return pages;
+             })()}
+             {Math.ceil(totalCount / pageSize) > currentPage + 2 && <span className="px-2">...</span>}
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(p => Math.min(Math.ceil(totalCount / pageSize), p + 1))}
+            disabled={currentPage >= Math.ceil(totalCount / pageSize)}
+          >
+            Suivant <ChevronRight className="h-4 w-4 ml-2" />
+          </Button>
+        </div>
+      </div>
+
+      {/* COMPOSANT DÉTAILS (MODAL OU SHEET) */}
+      {userSettings?.card_view_mode === 'sheet' ? (
+        <Sheet open={isDetailOpen} onOpenChange={setIsDetailOpen}>
+          <SheetContent className="sm:max-w-xl overflow-y-auto">
+            <SheetHeader>
+              <SheetTitle>{selectedItem?.card_name}</SheetTitle>
+              <SheetDescription>{selectedItem?.expansion}</SheetDescription>
+            </SheetHeader>
+            <CardDetailsContent item={selectedItem} history={orderHistory} />
+          </SheetContent>
+        </Sheet>
+      ) : (
+        <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
+          <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>{selectedItem?.card_name}</DialogTitle>
+              <DialogDescription>{selectedItem?.expansion}</DialogDescription>
+            </DialogHeader>
+            <CardDetailsContent item={selectedItem} history={orderHistory} />
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* MODAL ÉDITION */}
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Modifier la carte</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+             <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="edit-name" className="text-right">Nom</Label>
+              <Input id="edit-name" value={newItem.card_name} onChange={e => setNewItem({...newItem, card_name: e.target.value})} className="col-span-3" />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="edit-expansion" className="text-right">Édition</Label>
+              <Input id="edit-expansion" value={newItem.expansion} onChange={e => setNewItem({...newItem, expansion: e.target.value})} className="col-span-3" />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="edit-price" className="text-right">Prix (€)</Label>
+              <Input id="edit-price" type="number" step="0.01" value={newItem.listed_price} onChange={e => setNewItem({...newItem, listed_price: e.target.value})} className="col-span-3" />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="edit-quantity" className="text-right">Quantité</Label>
+              <Input id="edit-quantity" type="number" value={newItem.quantity} onChange={e => setNewItem({...newItem, quantity: e.target.value})} className="col-span-3" />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="edit-storage" className="text-right">Stockage</Label>
+              <Input id="edit-storage" placeholder="Ex: Boite A1" value={newItem.storage_location} onChange={e => setNewItem({...newItem, storage_location: e.target.value})} className="col-span-3" />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="edit-foil" className="text-right">Foil</Label>
+              <div className="col-span-3 flex items-center space-x-2">
+                <Checkbox
+                  id="edit-foil"
+                  checked={(newItem as any).is_foil}
+                  onCheckedChange={(checked) => setNewItem({...newItem, is_foil: checked === true} as any)}
+                />
+                <label htmlFor="edit-foil" className="text-sm">Cette carte est brillante (Foil)</label>
+              </div>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="edit-condition" className="text-right">État</Label>
+              <Select value={newItem.condition} onValueChange={v => setNewItem({...newItem, condition: v})}>
+                <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="MT">Mint (MT)</SelectItem>
+                  <SelectItem value="NM">Near Mint (NM)</SelectItem>
+                  <SelectItem value="EX">Excellent (EX)</SelectItem>
+                  <SelectItem value="GD">Good (GD)</SelectItem>
+                  <SelectItem value="LP">Light Played (LP)</SelectItem>
+                  <SelectItem value="PL">Played (PL)</SelectItem>
+                  <SelectItem value="PO">Poor (PO)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={handleUpdateItem}>Enregistrer les modifications</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* MODAL AJOUT MANUEL */}
       <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
         <DialogContent className="sm:max-w-[425px]">
@@ -496,8 +1051,22 @@ export default function CollectionPage() {
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="name" className="text-right">Nom</Label>
-              <Input id="name" value={newItem.card_name} onChange={e => setNewItem({...newItem, card_name: e.target.value})} className="col-span-3" />
+              <div className="col-span-3 flex gap-2">
+                <Input id="name" value={newItem.card_name} onChange={e => setNewItem({...newItem, card_name: e.target.value})} placeholder="Nom (FR ou EN)" />
+                <Button variant="outline" size="icon" onClick={handleSearchCard} disabled={isSearchingCard} title="Vérifier correspondance API">
+                   <Search className={`h-4 w-4 ${isSearchingCard ? 'animate-spin' : ''}`} />
+                </Button>
+              </div>
             </div>
+            {searchResult && (
+              <div className="grid grid-cols-4 items-center gap-4 bg-green-50 p-2 rounded border border-green-200">
+                <div className="text-[10px] uppercase font-bold text-green-700 text-right">Match API</div>
+                <div className="col-span-3 text-xs text-green-700">
+                  <strong>{searchResult.name_en}</strong><br/>
+                  <span className="opacity-80">{searchResult.expansion_en}</span>
+                </div>
+              </div>
+            )}
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="game" className="text-right">TCG</Label>
               <Select value={newItem.game} onValueChange={v => setNewItem({...newItem, game: v})}>
@@ -510,7 +1079,36 @@ export default function CollectionPage() {
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="expansion" className="text-right">Édition</Label>
-              <Input id="expansion" value={newItem.expansion} onChange={e => setNewItem({...newItem, expansion: e.target.value})} className="col-span-3" />
+              <div className="col-span-3">
+                {searchResult?.all_editions ? (
+                  <Select
+                    value={newItem.expansion}
+                    onValueChange={v => {
+                      const ed = searchResult.all_editions.find((e: any) => e.name === v);
+                      setNewItem({
+                        ...newItem,
+                        expansion: v,
+                        card_name_en: ed?.name_en || newItem.card_name_en,
+                        color: ed?.color || newItem.color,
+                        card_type: ed?.card_type || newItem.card_type
+                      });
+                    }}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Choisir une édition" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {searchResult.all_editions.map((ed: any) => (
+                        <SelectItem key={ed.name} value={ed.name}>
+                          {ed.name} {ed.code ? `(${ed.code.toUpperCase()})` : ''}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input id="expansion" value={newItem.expansion} onChange={e => setNewItem({...newItem, expansion: e.target.value})} placeholder="Ex: Dominaria" />
+                )}
+              </div>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="price" className="text-right">Prix (€)</Label>
@@ -531,6 +1129,17 @@ export default function CollectionPage() {
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="type" className="text-right">Type</Label>
               <Input id="type" placeholder="Ex: Créature, Pokémon" value={newItem.card_type} onChange={e => setNewItem({...newItem, card_type: e.target.value})} className="col-span-3" />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="add-foil" className="text-right">Foil</Label>
+              <div className="col-span-3 flex items-center space-x-2">
+                <Checkbox
+                  id="add-foil"
+                  checked={(newItem as any).is_foil}
+                  onCheckedChange={(checked) => setNewItem({...newItem, is_foil: checked === true} as any)}
+                />
+                <label htmlFor="add-foil" className="text-sm">Cette carte est brillante (Foil)</label>
+              </div>
             </div>
           </div>
           <DialogFooter>

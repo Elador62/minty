@@ -59,3 +59,38 @@ Optimisez la préparation de vos colis.
 - **Style :** Tailwind CSS + Shadcn UI
 - **Base de données :** Supabase (PostgreSQL + RLS)
 - **Icônes :** Lucide React
+
+## 🚀 Déploiement sur Vercel
+
+Suivez cette procédure détaillée pour mettre votre application en production sur Vercel.
+
+### 1. Préparation de la Base de données (Supabase)
+Avant de déployer le code, assurez-vous que votre instance Supabase de production est prête :
+1. Créez un nouveau projet sur [Supabase](https://supabase.com/).
+2. Allez dans l'**éditeur SQL** (SQL Editor) de votre tableau de bord Supabase.
+3. Exécutez l'intégralité des scripts SQL situés dans le dossier `supabase/migrations/` dans l'ordre chronologique (du plus ancien au plus récent). Cela créera les tables, les politiques RLS et les paramètres nécessaires.
+
+### 2. Déploiement sur Vercel
+1. Connectez-vous à [Vercel](https://vercel.com/) et cliquez sur **"New Project"**.
+2. Importez votre dépôt GitHub/GitLab/Bitbucket.
+3. Dans la section **Environment Variables**, ajoutez les variables suivantes :
+   - `NEXT_PUBLIC_SUPABASE_URL` : L'URL de votre projet Supabase (trouvable dans *Project Settings > API*).
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY` : La clé "anon" (public) de votre projet Supabase (trouvable dans *Project Settings > API*).
+4. Cliquez sur **Deploy**.
+
+### 3. Configuration de l'Authentification
+Vercel génère des URLs dynamiques (ex: `minty-green.vercel.app`). Supabase est très strict sur les redirections.
+1. Allez dans **Authentication > URL Configuration**.
+2. Dans **Site URL**, mettez l'URL principale : `https://minty-green.vercel.app`.
+3. Dans **Redirect URLs**, ajoutez **obligatoirement** les deux types suivants :
+   - L'URL exacte : `https://minty-green.vercel.app/api/auth/callback`
+   - Un wildcard pour supporter les déploiements Vercel : `https://*-green.vercel.app/**` (en remplaçant `green` par votre suffixe) ou plus simplement `https://*.vercel.app/**` pour les tests.
+4. **Attention :** Si l'URL dans la barre de votre navigateur ne correspond pas EXACTEMENT (caractère par caractère) à une URL autorisée dans Supabase, l'erreur "Invalid path specified" apparaîtra.
+
+### 4. Optimisation (Optionnel)
+- Pour des performances optimales avec Supabase, il est recommandé d'activer le **Connection Pooling** (via PgBouncer) dans les paramètres de base de données si vous prévoyez un trafic important.
+- L'application utilise `npm run build` qui exécute `next build` pour générer un build de production optimisé.
+
+### 🛠 Dépannage (Vercel)
+- **Erreur 500 (MIDDLEWARE_INVOCATION_FAILED) :** Vérifiez vos variables d'environnement (`NEXT_PUBLIC_SUPABASE_URL` et `NEXT_PUBLIC_SUPABASE_ANON_KEY`) dans Vercel. Redéployez après correction.
+- **Erreur Inscription (Invalid path specified...) :** Vérifiez que l'URL `https://votre-app.vercel.app/api/auth/callback` est bien présente dans la liste des **Redirect URLs** de votre projet Supabase (Authentication > URL Configuration).

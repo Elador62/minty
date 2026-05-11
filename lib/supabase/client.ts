@@ -5,9 +5,7 @@ export function createClient() {
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
   if (!url || !key) {
-    // Return a dummy client during build/SSG to avoid crashing
-    // This will only be called on the client side at runtime where env vars are available
-    return {} as any
+    return createBrowserClient('https://placeholder.supabase.co', 'placeholder')
   }
 
   return createBrowserClient(url, key)

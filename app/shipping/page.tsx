@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Printer, Search, CheckCircle2, ChevronDown, ChevronRight, AlertCircle, Box } from "lucide-react";
+import { Printer, Search, CheckCircle2, ChevronDown, ChevronRight, AlertCircle, Box, ExternalLink } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -113,6 +113,15 @@ export default function ShippingPage() {
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
                         <CardTitle className="text-xl">Commande {order.external_order_id}</CardTitle>
+                        <Button variant="ghost" size="icon" className="h-6 w-6 p-0 print:hidden" asChild title="Voir sur CardMarket">
+                          <a
+                            href={`https://www.cardmarket.com/fr/${order.order_items?.[0]?.game === 'pokemon' ? 'Pokemon' : 'Magic'}/Orders/${order.external_order_id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <ExternalLink className="h-3 w-3" />
+                          </a>
+                        </Button>
                         {order.is_trust_service && (
                           <div className="border-2 border-red-600 px-2 py-0.5 rounded animate-pulse uppercase font-black text-xs print:border-black print:text-black print:bg-white">
                             TRUST SERVICE

@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   ArrowRight,
   RotateCcw,
+  ExternalLink,
   Package,
   Truck,
   CheckCircle2,
@@ -305,6 +306,15 @@ export default function SuiviPage() {
                             </div>
                             <div className="flex items-center gap-1">
                               <span className="text-sm font-bold">{Number(order.total_price).toFixed(2)}€</span>
+                              <Button variant="ghost" size="icon" className="h-6 w-6 p-0" asChild title="Voir sur CardMarket">
+                                <a
+                                  href={`https://www.cardmarket.com/fr/${order.order_items?.[0]?.game === 'pokemon' ? 'Pokemon' : 'Magic'}/Orders/${order.external_order_id}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                >
+                                  <ExternalLink className="h-3 w-3" />
+                                </a>
+                              </Button>
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                   <Button variant="ghost" className="h-6 w-6 p-0">
@@ -450,6 +460,15 @@ export default function SuiviPage() {
                          {order.order_items?.[0]?.game || '-'}
                       </TableCell>
                       <TableCell className="text-right">
+                        <Button variant="ghost" size="sm" asChild title="Voir sur CardMarket">
+                          <a
+                            href={`https://www.cardmarket.com/fr/${order.order_items?.[0]?.game === 'pokemon' ? 'Pokemon' : 'Magic'}/Orders/${order.external_order_id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                          </a>
+                        </Button>
                         <Button variant="ghost" size="sm" onClick={() => handleEdit(order)}><Pencil className="h-4 w-4" /></Button>
                         <Button variant="ghost" size="sm" onClick={() => setOrderToDelete(order.id)} className="text-red-600"><Trash2 className="h-4 w-4" /></Button>
                       </TableCell>
