@@ -134,7 +134,7 @@ export default function ShippingPage() {
                   </div>
                   <div className="text-right">
                     <p className={`text-xs uppercase ${allPicked ? 'text-green-100' : 'text-muted-foreground'}`}>Mode d'envoi</p>
-                    <p className="font-black text-lg">{order.shipping_method || 'Standard'}</p>
+                    <p className="font-black text-lg uppercase">{order.shipping_method || 'Standard'}</p>
                     <p className="text-xs font-mono">{new Date(order.created_at).toLocaleDateString()}</p>
                   </div>
                 </CardHeader>

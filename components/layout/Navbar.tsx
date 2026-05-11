@@ -35,7 +35,7 @@ export function Navbar() {
   };
 
   return (
-    <nav className="border-b bg-white">
+    <nav className="border-b bg-white print:hidden">
       <div className="container mx-auto px-4 h-32 flex items-center justify-between">
         <div className="flex items-center gap-8">
           <Link href="/" className="font-bold text-xl text-primary">

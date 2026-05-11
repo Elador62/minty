@@ -171,6 +171,7 @@ export default function CollectionPage() {
     card_type: '',
   });
   const [searchResult, setSearchResult] = useState<any>(null);
+  const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearchingCard, setIsSearchingCard] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -276,22 +277,34 @@ export default function CollectionPage() {
     fetchInventory();
   };
 
+  const handleSelectSearchResult = (res: any) => {
+    setSearchResult(res);
+    setSearchResults([]);
+    setNewItem({
+      ...newItem,
+      card_name: res.name_en, // On met à jour le nom par le nom anglais trouvé
+      card_name_en: res.name_en,
+      expansion: res.expansion_en,
+      color: res.color || '',
+      card_type: res.card_type || '',
+    });
+    toast({ title: "Carte sélectionnée", description: `${res.name_en} (${res.expansion_en})` });
+  };
+
   const handleSearchCard = async () => {
     if (!newItem.card_name) return;
     setIsSearchingCard(true);
+    setSearchResults([]);
+    setSearchResult(null);
+
     const result = await getEnglishName(newItem.card_name, newItem.game, newItem.expansion);
-    if (result) {
-      setSearchResult(result);
-      setNewItem({
-        ...newItem,
-        card_name_en: result.name_en,
-        expansion: result.expansion_en,
-        color: result.color || '',
-        card_type: result.card_type || '',
-      });
-      toast({ title: "Carte trouvée", description: `Rapprochement avec : ${result.name_en} (${result.expansion_en})` });
+
+    if (Array.isArray(result)) {
+      setSearchResults(result);
+      toast({ title: "Plusieurs résultats", description: "Veuillez sélectionner la carte exacte dans la liste." });
+    } else if (result) {
+      handleSelectSearchResult(result);
     } else {
-      setSearchResult(null);
       toast({ title: "Non trouvé", description: "Impossible de trouver une correspondance exacte.", variant: "destructive" });
     }
     setIsSearchingCard(false);
@@ -393,9 +406,12 @@ export default function CollectionPage() {
 
         try {
           const match = await getEnglishName(name, game, expansion);
-          if (match) {
+          if (match && !Array.isArray(match)) {
             nameEn = match.name_en;
             expansionEn = match.expansion_en || expansion;
+          } else if (Array.isArray(match)) {
+            nameEn = match[0].name_en;
+            expansionEn = match[0].expansion_en || expansion;
           }
           imageUrl = await getCardThumbnail(nameEn, game);
         } catch (err) {
@@ -1058,12 +1074,38 @@ export default function CollectionPage() {
                 </Button>
               </div>
             </div>
+            {searchResults.length > 0 && (
+              <div className="col-span-4 space-y-2 max-h-48 overflow-y-auto p-2 bg-slate-50 rounded border">
+                <p className="text-[10px] font-bold uppercase text-muted-foreground px-1">Résultats trouvés ({searchResults.length}) :</p>
+                {searchResults.map((res, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center gap-3 p-2 hover:bg-white rounded cursor-pointer border border-transparent hover:border-slate-200 transition-colors"
+                    onClick={() => handleSelectSearchResult(res)}
+                  >
+                    <div className="w-8 h-12 bg-slate-200 rounded overflow-hidden flex-shrink-0">
+                      {res.image_url && <img src={res.image_url} alt="" className="w-full h-full object-cover" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                       <p className="text-xs font-bold truncate">{res.name_en}</p>
+                       <p className="text-[10px] text-muted-foreground truncate">{res.expansion_en}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
             {searchResult && (
               <div className="grid grid-cols-4 items-center gap-4 bg-green-50 p-2 rounded border border-green-200">
                 <div className="text-[10px] uppercase font-bold text-green-700 text-right">Match API</div>
-                <div className="col-span-3 text-xs text-green-700">
-                  <strong>{searchResult.name_en}</strong><br/>
-                  <span className="opacity-80">{searchResult.expansion_en}</span>
+                <div className="col-span-3 flex items-center gap-3">
+                  <div className="w-8 h-12 bg-slate-200 rounded overflow-hidden flex-shrink-0">
+                    {searchResult.image_url && <img src={searchResult.image_url} alt="" className="w-full h-full object-cover" />}
+                  </div>
+                  <div className="text-xs text-green-700">
+                    <strong>{searchResult.name_en}</strong><br/>
+                    <span className="opacity-80">{searchResult.expansion_en}</span>
+                  </div>
                 </div>
               </div>
             )}
@@ -1083,7 +1125,16 @@ export default function CollectionPage() {
                 {searchResult?.all_editions ? (
                   <Select
                     value={newItem.expansion}
-                    onValueChange={v => setNewItem({...newItem, expansion: v})}
+                    onValueChange={v => {
+                      const ed = searchResult.all_editions.find((e: any) => e.name === v);
+                      setNewItem({
+                        ...newItem,
+                        expansion: v,
+                        card_name_en: ed?.name_en || newItem.card_name_en,
+                        color: ed?.color || newItem.color,
+                        card_type: ed?.card_type || newItem.card_type
+                      });
+                    }}
                   >
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Choisir une édition" />

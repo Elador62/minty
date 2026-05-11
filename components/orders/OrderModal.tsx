@@ -4,6 +4,8 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -29,16 +31,51 @@ export function OrderModal({ order, isOpen, onClose, onRefresh }: OrderModalProp
     buyer_address: order?.buyer_address || "",
     total_price: order?.total_price || 0,
     shipping_cost: order?.shipping_cost || 0,
-    shipping_method: order?.shipping_method || "",
-    status: order?.status || "paid"
+    shipping_method: order?.shipping_method || "Lettre Verte(max. 20g)",
+    status: order?.status || "paid",
+    is_trust_service: order?.is_trust_service || false
   });
   const [items, setItems] = useState<any[]>(order?.order_items || []);
+  const [inventorySearch, setInventorySearch] = useState("");
+  const [inventoryResults, setInventoryResults] = useState<any[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
   const supabase = createClient();
 
-  const handleAddItem = () => {
-    setItems([...items, { card_name: "", expansion: "", quantity: 1, price: 0, condition: "NM", language: "Français", game: "pokemon" }]);
+  const handleAddItem = (inventoryItem?: any) => {
+    if (inventoryItem) {
+      setItems([...items, {
+        card_name: inventoryItem.card_name,
+        expansion: inventoryItem.expansion,
+        quantity: 1,
+        price: inventoryItem.listed_price,
+        condition: inventoryItem.condition,
+        language: inventoryItem.language,
+        game: inventoryItem.game,
+        image_url: inventoryItem.image_url
+      }]);
+      setInventoryResults([]);
+      setInventorySearch("");
+    } else {
+      setItems([...items, { card_name: "", expansion: "", quantity: 1, price: 0, condition: "NM", language: "Français", game: "pokemon" }]);
+    }
+  };
+
+  const searchInventory = async (query: string) => {
+    setInventorySearch(query);
+    if (query.length < 2) {
+      setInventoryResults([]);
+      return;
+    }
+
+    const { data } = await supabase
+      .from('inventory_items')
+      .select('*')
+      .ilike('card_name', `%${query}%`)
+      .eq('is_archived', false)
+      .limit(5);
+
+    setInventoryResults(data || []);
   };
 
   const handleRemoveItem = (index: number) => {
@@ -115,12 +152,63 @@ export function OrderModal({ order, isOpen, onClose, onRefresh }: OrderModalProp
             <Label>Frais de port (€)</Label>
             <Input type="number" value={formData.shipping_cost} onChange={e => setFormData({...formData, shipping_cost: parseFloat(e.target.value)})} />
           </div>
+          <div className="space-y-2">
+            <Label>Méthode d'envoi</Label>
+            <Select
+              value={formData.shipping_method}
+              onValueChange={v => setFormData({...formData, shipping_method: v})}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Lettre Internationale (Priority Letter)(max. 20g)">Lettre Internationale (Priority Letter)(max. 20g)</SelectItem>
+                <SelectItem value="Lettre Verte(max. 20g)">Lettre Verte(max. 20g)</SelectItem>
+                <SelectItem value="Lettre Verte Suivi(max. 20g)">Lettre Verte Suivi(max. 20g)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center space-x-2 pt-8">
+            <Checkbox
+              id="trust"
+              checked={formData.is_trust_service}
+              onCheckedChange={(checked) => setFormData({...formData, is_trust_service: !!checked})}
+            />
+            <Label htmlFor="trust" className="font-bold text-red-600">TIERS DE CONFIANCE (THRUST)</Label>
+          </div>
         </div>
 
         <div className="space-y-4">
           <div className="flex justify-between items-center border-b pb-2">
             <h4 className="font-bold">Items</h4>
-            <Button size="sm" onClick={handleAddItem}><Plus className="h-4 w-4 mr-1" /> Ajouter</Button>
+            <div className="flex gap-2 items-center relative">
+               <div className="relative">
+                  <Input
+                    placeholder="Chercher dans la collection..."
+                    className="h-8 text-xs w-64"
+                    value={inventorySearch}
+                    onChange={e => searchInventory(e.target.value)}
+                  />
+                  {inventoryResults.length > 0 && (
+                    <div className="absolute top-full left-0 right-0 z-50 bg-white border rounded shadow-lg mt-1 overflow-hidden">
+                       {inventoryResults.map(item => (
+                         <div
+                           key={item.id}
+                           className="flex items-center gap-2 p-2 hover:bg-slate-50 cursor-pointer border-b last:border-0"
+                           onClick={() => handleAddItem(item)}
+                         >
+                            <img src={item.image_url} className="w-6 h-8 object-cover rounded" alt="" />
+                            <div className="flex-1 min-w-0">
+                               <p className="text-[10px] font-bold truncate">{item.card_name}</p>
+                               <p className="text-[8px] text-muted-foreground truncate">{item.expansion} ({item.quantity} en stock)</p>
+                            </div>
+                         </div>
+                       ))}
+                    </div>
+                  )}
+               </div>
+               <Button size="sm" variant="outline" className="h-8" onClick={() => handleAddItem()}><Plus className="h-4 w-4 mr-1" /> Manuel</Button>
+            </div>
           </div>
           {items.map((item, idx) => (
             <div key={idx} className="grid grid-cols-6 gap-2 items-end border-b pb-3">
