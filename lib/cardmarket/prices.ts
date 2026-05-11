@@ -4,28 +4,31 @@ export async function getCardPrice(name: string, game: string, expansion?: strin
 
   try {
     if (game === 'magic') {
-      // Format recommandé par l'utilisateur : !"Nom" set:code
-      // On gère intelligemment si l'édition est un code ou un nom complet
-      let searchQuery = `!"${cleanName}"`;
-      if (expansion) {
-        if (expansion.length <= 5) {
-          searchQuery += ` set:${expansion}`;
-        } else {
-          searchQuery += ` set:"${expansion}"`;
-        }
+      // Structure exacte demandée : https://api.scryfall.com/cards/named?exact="<card_name>"&set=<set_code>
+      let url = `https://api.scryfall.com/cards/named?exact=${encodeURIComponent(`"${cleanName}"`)}`;
+      if (expansion && expansion.length <= 5) {
+        url += `&set=${encodeURIComponent(expansion)}`;
       }
 
-      const url = `https://api.scryfall.com/cards/search?q=${encodeURIComponent(searchQuery)}`;
       const response = await fetch(url);
       const data = await response.json();
 
-      if (data.data && data.data.length > 0) {
-        const p = data.data[0].prices;
-        // Extraction du prix avec priorité au type (Foil/Normal)
+      if (data.prices) {
+        const p = data.prices;
         if (isFoil) {
           return parseFloat(p.eur_foil) || parseFloat(p.eur) || parseFloat(p.usd_foil) || parseFloat(p.usd) || null;
         }
         return parseFloat(p.eur) || parseFloat(p.eur_foil) || parseFloat(p.usd) || parseFloat(p.usd_foil) || null;
+      }
+
+      // Fallback search si named échoue
+      const searchQuery = expansion && expansion.length <= 5 ? `!"${cleanName}" set:${expansion}` : `!"${cleanName}"`;
+      const searchRes = await fetch(`https://api.scryfall.com/cards/search?q=${encodeURIComponent(searchQuery)}`);
+      const searchData = await searchRes.json();
+      if (searchData.data?.[0]?.prices) {
+        const p = searchData.data[0].prices;
+        if (isFoil) return parseFloat(p.eur_foil) || parseFloat(p.eur) || null;
+        return parseFloat(p.eur) || parseFloat(p.eur_foil) || null;
       }
 
     } else if (game === 'pokemon') {

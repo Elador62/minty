@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { getLanguageFlag, SUPPORTED_LANGUAGES } from "@/lib/utils/languages";
 import {
   Dialog,
   DialogContent,
@@ -38,9 +39,18 @@ export function OrderModal({ order, isOpen, onClose, onRefresh }: OrderModalProp
   const [items, setItems] = useState<any[]>(order?.order_items || []);
   const [inventorySearch, setInventorySearch] = useState("");
   const [inventoryResults, setInventoryResults] = useState<any[]>([]);
+  const [userSettings, setUserSettings] = useState<any>(null);
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
   const supabase = createClient();
+
+  useEffect(() => {
+    async function fetchSettings() {
+      const { data } = await supabase.from('user_settings').select('*').single();
+      if (data) setUserSettings(data);
+    }
+    fetchSettings();
+  }, []);
 
   const handleAddItem = (inventoryItem?: any) => {
     if (inventoryItem) {
@@ -162,9 +172,15 @@ export function OrderModal({ order, isOpen, onClose, onRefresh }: OrderModalProp
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Lettre Internationale (Priority Letter)(max. 20g)">Lettre Internationale (Priority Letter)(max. 20g)</SelectItem>
-                <SelectItem value="Lettre Verte(max. 20g)">Lettre Verte(max. 20g)</SelectItem>
-                <SelectItem value="Lettre Verte Suivi(max. 20g)">Lettre Verte Suivi(max. 20g)</SelectItem>
+                {userSettings?.shipping_methods?.map((m: string) => (
+                  <SelectItem key={m} value={m}>{m}</SelectItem>
+                )) || (
+                  <>
+                    <SelectItem value="Lettre Internationale (Priority Letter)(max. 20g)">Lettre Internationale (Priority Letter)(max. 20g)</SelectItem>
+                    <SelectItem value="Lettre Verte(max. 20g)">Lettre Verte(max. 20g)</SelectItem>
+                    <SelectItem value="Lettre Verte Suivi(max. 20g)">Lettre Verte Suivi(max. 20g)</SelectItem>
+                  </>
+                )}
               </SelectContent>
             </Select>
           </div>
@@ -245,6 +261,18 @@ export function OrderModal({ order, isOpen, onClose, onRefresh }: OrderModalProp
                 }}>
                   <option value="pokemon">Pokémon</option>
                   <option value="magic">Magic</option>
+                </select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-[10px]">Langue</Label>
+                <select className="flex h-8 w-full rounded-md border border-input bg-transparent px-3 py-1 text-xs shadow-sm" value={item.language} onChange={e => {
+                   const newItems = [...items];
+                   newItems[idx].language = e.target.value;
+                   setItems(newItems);
+                }}>
+                  {SUPPORTED_LANGUAGES.map(lang => (
+                    <option key={lang} value={lang}>{getLanguageFlag(lang)} {lang}</option>
+                  ))}
                 </select>
               </div>
               <Button variant="ghost" size="sm" className="text-red-500 h-8" onClick={() => handleRemoveItem(idx)}>

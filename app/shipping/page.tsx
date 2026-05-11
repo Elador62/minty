@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { getLanguageFlag } from "@/lib/utils/languages";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -182,9 +183,10 @@ export default function ShippingPage() {
                             <div className="flex-1">
                               <div className="flex justify-between items-start">
                                 <div className="flex flex-col">
-                                  <p className="font-black text-xl leading-tight print:text-sm">
-                                    <span className="text-slate-400 mr-2">1x</span>
+                                  <p className="font-black text-xl leading-tight print:text-sm flex items-center gap-2">
+                                    <span className="text-slate-400">1x</span>
                                     {item.card_name}
+                                    <span className="text-sm font-normal opacity-70">{getLanguageFlag(item.language)}</span>
                                   </p>
                                   {(() => {
                                     const inv = inventory.find(i => i.card_name === item.card_name && i.expansion === item.expansion);

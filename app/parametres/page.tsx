@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Save, Palette, BarChart3, Bell, Eye } from "lucide-react";
+import { Save, Palette, BarChart3, Bell, Eye, Truck, Plus, Trash2 } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 const PRICE_SOURCES = [
@@ -40,7 +40,12 @@ export default function SettingsPage() {
     price_sources: ["Trend CardMarket", "Avg Sell CardMarket"],
     price_alert_threshold: 10,
     price_alert_period_days: 30,
-    card_view_mode: 'modal'
+    card_view_mode: 'modal',
+    shipping_methods: [
+      "Lettre Internationale (Priority Letter)(max. 20g)",
+      "Lettre Verte(max. 20g)",
+      "Lettre Verte Suivi(max. 20g)"
+    ]
   });
 
   const supabase = createClient();
@@ -86,7 +91,8 @@ export default function SettingsPage() {
         price_sources: settings.price_sources,
         price_alert_threshold: settings.price_alert_threshold,
         price_alert_period_days: settings.price_alert_period_days,
-        card_view_mode: settings.card_view_mode
+        card_view_mode: settings.card_view_mode,
+        shipping_methods: settings.shipping_methods
       }, {
         onConflict: 'user_id'
       });
@@ -252,6 +258,56 @@ export default function SettingsPage() {
                 <Label htmlFor="mode-sheet">Volet latéral (Droite)</Label>
               </div>
             </RadioGroup>
+          </CardContent>
+        </Card>
+
+        {/* MÉTHODES D'ENVOI */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Truck className="h-5 w-5" /> Méthodes d'envoi
+            </CardTitle>
+            <CardDescription>Configurez vos options de livraison pour les commandes</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+             <div className="space-y-2">
+                {settings.shipping_methods?.map((method: string, i: number) => (
+                  <div key={i} className="flex gap-2">
+                    <Input
+                      value={method}
+                      onChange={(e) => {
+                        const next = [...settings.shipping_methods];
+                        next[i] = e.target.value;
+                        setSettings({ ...settings, shipping_methods: next });
+                      }}
+                    />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-destructive"
+                      onClick={() => {
+                        const next = settings.shipping_methods.filter((_: any, idx: number) => idx !== i);
+                        setSettings({ ...settings, shipping_methods: next });
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full mt-2"
+                  onClick={() => {
+                    setSettings({
+                      ...settings,
+                      shipping_methods: [...(settings.shipping_methods || []), "Nouvelle méthode"]
+                    });
+                  }}
+                >
+                  <Plus className="h-4 w-4 mr-2" /> Ajouter une méthode
+                </Button>
+             </div>
           </CardContent>
         </Card>
       </div>

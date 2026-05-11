@@ -62,6 +62,7 @@ import { getCardThumbnail } from "@/lib/cardmarket/images";
 import { getCardPrice } from "@/lib/cardmarket/prices";
 import { getCardMarketUrl } from "@/lib/cardmarket/urls";
 import { getEnglishName } from "@/lib/cardmarket/search";
+import { getLanguageFlag, SUPPORTED_LANGUAGES } from "@/lib/utils/languages";
 
 function CardDetailsContent({ item, history }: { item: any, history: any[] }) {
   if (!item) return null;
@@ -84,7 +85,7 @@ function CardDetailsContent({ item, history }: { item: any, history: any[] }) {
             </div>
             <div>
               <p className="text-muted-foreground">État / Langue</p>
-              <p className="font-bold">{item.condition} / {item.language}</p>
+              <p className="font-bold">{item.condition} / {getLanguageFlag(item.language)}</p>
             </div>
             <div>
               <p className="text-muted-foreground">Stockage</p>
@@ -782,8 +783,11 @@ export default function CollectionPage() {
                               </div>
                             </TableCell>
                             <TableCell className="font-medium">
-                              {item.card_name}
-                              {item.is_foil && <Badge className="ml-2 bg-purple-100 text-purple-700">Foil</Badge>}
+                              <div className="flex items-center gap-2">
+                                {item.card_name}
+                                <span title={item.language}>{getLanguageFlag(item.language)}</span>
+                                {item.is_foil && <Badge className="bg-purple-100 text-purple-700 text-[10px] h-4 py-0">Foil</Badge>}
+                              </div>
                             </TableCell>
                             <TableCell>{item.expansion}</TableCell>
                             <TableCell>
@@ -880,7 +884,10 @@ export default function CollectionPage() {
                         )}
                       </div>
                       <CardContent className="p-3">
-                        <p className="font-bold text-sm truncate">{item.card_name}</p>
+                        <p className="font-bold text-sm truncate flex items-center gap-1">
+                          <span className="truncate flex-1">{item.card_name}</span>
+                          <span className="text-xs">{getLanguageFlag(item.language)}</span>
+                        </p>
                         <p className="text-[10px] text-muted-foreground truncate">{item.expansion}</p>
                         <div className="mt-2 flex justify-between items-end">
                           <span className="text-xs font-bold">{Number(item.listed_price).toFixed(2)}€</span>
@@ -1043,6 +1050,17 @@ export default function CollectionPage() {
               </div>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="edit-language" className="text-right">Langue</Label>
+              <Select value={newItem.language} onValueChange={v => setNewItem({...newItem, language: v})}>
+                <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {SUPPORTED_LANGUAGES.map(lang => (
+                    <SelectItem key={lang} value={lang}>{lang}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="edit-condition" className="text-right">État</Label>
               <Select value={newItem.condition} onValueChange={v => setNewItem({...newItem, condition: v})}>
                 <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
@@ -1178,6 +1196,17 @@ export default function CollectionPage() {
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="type" className="text-right">Type</Label>
               <Input id="type" placeholder="Ex: Créature, Pokémon" value={newItem.card_type} onChange={e => setNewItem({...newItem, card_type: e.target.value})} className="col-span-3" />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="language" className="text-right">Langue</Label>
+              <Select value={newItem.language} onValueChange={v => setNewItem({...newItem, language: v})}>
+                <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {SUPPORTED_LANGUAGES.map(lang => (
+                    <SelectItem key={lang} value={lang}>{lang}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="add-foil" className="text-right">Foil</Label>

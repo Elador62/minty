@@ -38,6 +38,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { OrderModal } from "@/components/orders/OrderModal";
+import { getLanguageFlag } from "@/lib/utils/languages";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -382,7 +383,10 @@ export default function SuiviPage() {
                                 const isMissing = !inv || inv.quantity < item.quantity;
                                 return (
                                   <div key={idx} className={`flex justify-between gap-2 border-b border-dashed border-slate-100 pb-1 last:border-0 ${isMissing ? 'text-red-600 font-bold' : ''}`}>
-                                    <span className="truncate">{item.quantity}x {item.card_name}</span>
+                                    <span className="truncate flex items-center gap-1">
+                                      {item.quantity}x {item.card_name}
+                                      <span className="text-[8px] opacity-70">{getLanguageFlag(item.language)}</span>
+                                    </span>
                                     <span className="text-[9px] shrink-0">{isMissing ? 'HORS STOCK' : item.condition}</span>
                                   </div>
                                 );
