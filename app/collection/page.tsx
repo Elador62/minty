@@ -686,7 +686,7 @@ export default function CollectionPage() {
                                <div className="flex justify-end gap-1">
                                   <Button variant="ghost" size="sm" asChild title="Voir sur CardMarket">
                                     <a
-                                      href={item.cardmarket_url || `https://www.cardmarket.com/fr/${item.game === 'pokemon' ? 'Pokemon' : 'Magic'}/Products/Search?searchString=${encodeURIComponent(item.card_name)} ${encodeURIComponent(item.expansion || '')}`}
+                                      href={item.cardmarket_url || `https://www.cardmarket.com/fr/${item.game === 'pokemon' ? 'Pokemon' : 'Magic'}/Products/Search?searchString=${encodeURIComponent(`${item.card_name} ${item.expansion || ''}`.trim())}`}
                                       target="_blank"
                                       rel="noopener noreferrer"
                                     >
@@ -757,7 +757,7 @@ export default function CollectionPage() {
                         </div>
                         <div className="mt-2 pt-2 border-t flex justify-between items-center">
                            <Button variant="ghost" size="sm" className="h-7 px-2 text-[10px]" asChild>
-                              <a href={item.cardmarket_url || `https://www.cardmarket.com/fr/${item.game === 'pokemon' ? 'Pokemon' : 'Magic'}/Products/Search?searchString=${encodeURIComponent(item.card_name)} ${encodeURIComponent(item.expansion || '')}`} target="_blank" rel="noopener noreferrer">
+                              <a href={item.cardmarket_url || `https://www.cardmarket.com/fr/${item.game === 'pokemon' ? 'Pokemon' : 'Magic'}/Products/Search?searchString=${encodeURIComponent(`${item.card_name} ${item.expansion || ''}`.trim())}`} target="_blank" rel="noopener noreferrer">
                                 CM <ExternalLink className="ml-1 h-3 w-3" />
                               </a>
                            </Button>

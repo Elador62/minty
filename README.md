@@ -79,17 +79,16 @@ Avant de déployer le code, assurez-vous que votre instance Supabase de producti
 4. Cliquez sur **Deploy**.
 
 ### 3. Configuration de l'Authentification
-Vercel génère une URL de production (ex: `https://votre-app.vercel.app`). Vous devez autoriser cette URL dans Supabase :
+Vercel génère une URL de production (ex: `https://votre-app.vercel.app`). Vous devez impérativement configurer cette URL dans Supabase pour permettre l'inscription :
 1. Allez dans **Authentication > URL Configuration**.
-2. Dans **Site URL**, mettez l'URL principale de votre application Vercel.
-3. Dans **Redirect URLs**, ajoutez `https://votre-app.vercel.app/**` pour autoriser toutes les redirections après connexion.
+2. Dans **Site URL**, mettez l'URL exacte de votre application Vercel (ex: `https://minty-app.vercel.app`).
+3. Dans **Redirect URLs**, ajoutez explicitement l'URL de callback : `https://minty-app.vercel.app/api/auth/callback`.
+4. **Note :** Sans cette configuration, vous recevrez une erreur "Invalid path specified in request URL" lors de l'inscription.
 
 ### 4. Optimisation (Optionnel)
 - Pour des performances optimales avec Supabase, il est recommandé d'activer le **Connection Pooling** (via PgBouncer) dans les paramètres de base de données si vous prévoyez un trafic important.
 - L'application utilise `npm run build` qui exécute `next build` pour générer un build de production optimisé.
 
 ### 🛠 Dépannage (Vercel)
-Si vous obtenez une erreur **500: INTERNAL_SERVER_ERROR (MIDDLEWARE_INVOCATION_FAILED)** :
-1. Vérifiez que vos variables d'environnement (`NEXT_PUBLIC_SUPABASE_URL` et `NEXT_PUBLIC_SUPABASE_ANON_KEY`) sont correctement saisies dans Vercel.
-2. Assurez-vous qu'il n'y a pas d'espace avant ou après les valeurs des clés.
-3. Redéployez votre application après avoir vérifié les variables.
+- **Erreur 500 (MIDDLEWARE_INVOCATION_FAILED) :** Vérifiez vos variables d'environnement (`NEXT_PUBLIC_SUPABASE_URL` et `NEXT_PUBLIC_SUPABASE_ANON_KEY`) dans Vercel. Redéployez après correction.
+- **Erreur Inscription (Invalid path specified...) :** Vérifiez que l'URL `https://votre-app.vercel.app/api/auth/callback` est bien présente dans la liste des **Redirect URLs** de votre projet Supabase (Authentication > URL Configuration).
