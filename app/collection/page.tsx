@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import {
   RefreshCw,
   RotateCcw,
+  Bug,
   TrendingUp,
   TrendingDown,
   AlertCircle,
@@ -38,6 +39,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
+import Link from "next/link";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Dialog,
@@ -634,6 +636,11 @@ export default function CollectionPage() {
           </Button>
           <Button onClick={handleUpdatePrices} disabled={isRefreshing || items.length === 0}>
             <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} /> Actualiser Prix
+          </Button>
+          <Button variant="ghost" size="icon" asChild title="Debug APIs de prix">
+             <Link href="/collection/debug-prices">
+                <Bug className="h-4 w-4 text-muted-foreground" />
+             </Link>
           </Button>
         </div>
       </div>
