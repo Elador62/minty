@@ -282,6 +282,13 @@ export default function CollectionPage() {
     const result = await getEnglishName(newItem.card_name, newItem.game, newItem.expansion);
     if (result) {
       setSearchResult(result);
+      setNewItem({
+        ...newItem,
+        card_name_en: result.name_en,
+        expansion: result.expansion_en,
+        color: result.color || '',
+        card_type: result.card_type || '',
+      });
       toast({ title: "Carte trouvée", description: `Rapprochement avec : ${result.name_en} (${result.expansion_en})` });
     } else {
       setSearchResult(null);
@@ -1072,7 +1079,27 @@ export default function CollectionPage() {
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="expansion" className="text-right">Édition</Label>
-              <Input id="expansion" value={newItem.expansion} onChange={e => setNewItem({...newItem, expansion: e.target.value})} className="col-span-3" />
+              <div className="col-span-3">
+                {searchResult?.all_editions ? (
+                  <Select
+                    value={newItem.expansion}
+                    onValueChange={v => setNewItem({...newItem, expansion: v})}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Choisir une édition" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {searchResult.all_editions.map((ed: any) => (
+                        <SelectItem key={ed.name} value={ed.name}>
+                          {ed.name} {ed.code ? `(${ed.code.toUpperCase()})` : ''}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input id="expansion" value={newItem.expansion} onChange={e => setNewItem({...newItem, expansion: e.target.value})} placeholder="Ex: Dominaria" />
+                )}
+              </div>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="price" className="text-right">Prix (€)</Label>
