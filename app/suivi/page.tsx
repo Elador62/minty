@@ -63,6 +63,8 @@ interface Order {
   status: OrderStatus;
   is_trust_service: boolean;
   created_at: string;
+  shipped_at?: string;
+  delivered_at?: string;
   order_items?: any[];
 }
 
@@ -112,7 +114,10 @@ export default function SuiviPage() {
   };
 
   const fetchInventory = async () => {
-    const { data } = await supabase.from('inventory_items').select('card_name, expansion, quantity');
+    const { data } = await supabase
+      .from('inventory_items')
+      .select('id, card_name, expansion, quantity, is_archived')
+      .eq('is_archived', false);
     setInventory(data || []);
   };
 
@@ -122,7 +127,27 @@ export default function SuiviPage() {
   };
 
   useEffect(() => {
-    Promise.all([fetchOrders(), fetchInventory(), fetchSettings()]).then(() => setIsLoading(false));
+    Promise.all([fetchOrders(), fetchInventory(), fetchSettings()]).then(() => {
+      setIsLoading(false);
+
+      // Check for order ID in URL to open modal
+      const params = new URLSearchParams(window.location.search);
+      const orderId = params.get('orderId');
+      if (orderId) {
+        // We wait a bit for the orders to be loaded in the state
+        // or we can fetch it directly to be sure
+        supabase.from('orders')
+          .select('id, external_order_id, buyer_name, total_price, shipping_cost, status, is_trust_service, created_at, shipped_at, delivered_at, order_items(*)')
+          .eq('id', orderId)
+          .single()
+          .then(({ data }) => {
+            if (data) {
+              setEditingOrder(data);
+              setIsModalOpen(true);
+            }
+          });
+      }
+    });
   }, []);
 
   const updateStatus = async (orderId: string, nextStatus: OrderStatus) => {
@@ -138,12 +163,13 @@ export default function SuiviPage() {
     // Décrémentation du stock si passage en 'shipped'
     if (nextStatus === 'shipped' && order && order.status !== 'shipped') {
       for (const item of order.order_items || []) {
-        // Recherche d'une carte correspondante dans l'inventaire
+        // Recherche d'une carte correspondante dans l'inventaire (non archivée)
         const { data: inventoryCards } = await supabase
           .from('inventory_items')
           .select('id, quantity')
           .eq('card_name', item.card_name)
           .eq('expansion', item.expansion)
+          .eq('is_archived', false)
           .gt('quantity', 0)
           .limit(1);
 
@@ -158,8 +184,11 @@ export default function SuiviPage() {
     }
 
     const updateData: any = { status: nextStatus };
-    if (nextStatus === 'shipped') {
+    if (nextStatus === 'shipped' && !order?.shipped_at) {
       updateData.shipped_at = new Date().toISOString();
+    }
+    if (nextStatus === 'completed' && !order?.delivered_at) {
+      updateData.delivered_at = new Date().toISOString();
     }
 
     const { error } = await supabase
@@ -259,8 +288,9 @@ export default function SuiviPage() {
   };
 
   const renderKanban = () => (
-    <ScrollArea className="w-full whitespace-nowrap rounded-md border bg-slate-50/50 [direction:rtl]">
-      <div className="[direction:ltr] pt-4">
+    <ScrollArea className="w-full whitespace-nowrap rounded-md border bg-slate-50/50 overflow-x-auto">
+      <ScrollBar orientation="horizontal" className="h-2" />
+      <div className="pt-4">
         <div className="flex w-max space-x-6 p-6 min-h-[700px]">
           {COLUMNS.map((col) => {
             const colOrders = getFilteredAndSortedOrders(orders.filter(o => o.status === col.id));
@@ -290,10 +320,12 @@ export default function SuiviPage() {
                     const isOld = ['paid', 'ready', 'preparing'].includes(order.status) && daysSinceCreation > 4;
                     const isUrgent = ['paid', 'ready', 'preparing'].includes(order.status) && daysSinceCreation > 6;
 
-                    const stockAlerts = order.order_items?.filter(item => {
-                      const inv = inventory.find(i => i.card_name === item.card_name && i.expansion === item.expansion);
-                      return !inv || inv.quantity < item.quantity;
-                    }) || [];
+                    const stockAlerts = ['paid', 'ready', 'preparing'].includes(order.status)
+                      ? order.order_items?.filter(item => {
+                          const inv = inventory.find(i => i.card_name === item.card_name && i.expansion === item.expansion);
+                          return !inv || inv.quantity < item.quantity;
+                        }) || []
+                      : [];
                     const hasStockIssue = stockAlerts.length > 0;
 
                     return (
@@ -387,7 +419,16 @@ export default function SuiviPage() {
                                 const inv = inventory.find(i => i.card_name === item.card_name && i.expansion === item.expansion);
                                 const isMissing = !inv || inv.quantity < item.quantity;
                                 return (
-                                  <div key={idx} className={`flex justify-between gap-2 border-b border-dashed border-slate-100 pb-1 last:border-0 ${isMissing ? 'text-red-600 font-bold' : ''}`}>
+                                  <div
+                                    key={idx}
+                                    className={`flex justify-between gap-2 border-b border-dashed border-slate-100 pb-1 last:border-0 cursor-pointer hover:bg-slate-50 ${isMissing ? 'text-red-600 font-bold' : ''}`}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const inv = inventory.find(i => i.card_name === item.card_name && i.expansion === item.expansion);
+                                      const url = inv ? `/collection?id=${inv.id}` : `/collection?search=${encodeURIComponent(item.card_name)}`;
+                                      window.location.href = url;
+                                    }}
+                                  >
                                     <span className="truncate flex items-center gap-1">
                                       {item.quantity}x {item.card_name}
                                       <span className="text-[8px] opacity-70">{getLanguageFlag(item.language)}</span>
@@ -407,7 +448,6 @@ export default function SuiviPage() {
             );
           })}
         </div>
-        <ScrollBar orientation="horizontal" className="mt-[-16px] mb-4 h-3" />
       </div>
     </ScrollArea>
   );

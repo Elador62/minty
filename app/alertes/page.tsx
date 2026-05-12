@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-type AlertType = 'price' | 'shipping' | 'reception';
+type AlertType = 'price' | 'shipping' | 'reception' | 'stock';
 
 interface Alert {
   id: string;
@@ -76,7 +76,8 @@ export default function AlertesPage() {
       return alert.metadata.diff > 0 ? <TrendingUp className="h-5 w-5 text-green-600" /> : <TrendingDown className="h-5 w-5 text-red-600" />;
     }
     if (alert.type === 'shipping') return <Clock className="h-5 w-5 text-orange-600" />;
-    return <Truck className="h-5 w-5 text-blue-600" />;
+    if (alert.type === 'reception') return <Truck className="h-5 w-5 text-blue-600" />;
+    return <AlertTriangle className="h-5 w-5 text-red-600" />;
   };
 
   const getSeverityBadge = (severity: string) => {
@@ -108,6 +109,7 @@ export default function AlertesPage() {
                  <SelectItem value="price">Prix</SelectItem>
                  <SelectItem value="shipping">Envoi</SelectItem>
                  <SelectItem value="reception">Réception</SelectItem>
+                 <SelectItem value="stock">Stock</SelectItem>
                </SelectContent>
              </Select>
            </div>
@@ -161,7 +163,13 @@ export default function AlertesPage() {
               groups['Toutes les alertes'] = filteredAlerts;
             } else {
               filteredAlerts.forEach(a => {
-                const key = a.type === 'price' ? 'Alertes de Prix' : a.type === 'shipping' ? 'Alertes d\'Envoi' : 'Alertes de Réception';
+                const keyMap: Record<string, string> = {
+                  price: 'Alertes de Prix',
+                  shipping: 'Alertes d\'Envoi',
+                  reception: 'Alertes de Réception',
+                  stock: 'Alertes de Stock'
+                };
+                const key = keyMap[a.type] || 'Autres';
                 if (!groups[key]) groups[key] = [];
                 groups[key].push(a);
               });
@@ -177,7 +185,7 @@ export default function AlertesPage() {
                     <Card key={alert.id} className={`overflow-hidden border-l-4 ${alert.severity === 'red' ? 'border-l-red-600' : alert.severity === 'orange' ? 'border-l-orange-500' : 'border-l-blue-400'}`}>
                       <CardContent className="p-0">
                         <div className="flex items-center p-4 gap-4">
-                          <div className={`p-3 rounded-full ${alert.type === 'price' ? 'bg-green-50' : alert.type === 'shipping' ? 'bg-orange-50' : 'bg-blue-50'}`}>
+                          <div className={`p-3 rounded-full ${alert.type === 'price' ? 'bg-green-50' : alert.type === 'shipping' ? 'bg-orange-50' : alert.type === 'reception' ? 'bg-blue-50' : 'bg-red-50'}`}>
                             {getAlertIcon(alert)}
                           </div>
                           <div className="flex-1 min-w-0">
