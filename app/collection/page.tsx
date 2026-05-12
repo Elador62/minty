@@ -172,6 +172,7 @@ export default function CollectionPage() {
     language: 'Français',
     color: '',
     card_type: '',
+    set_code: '',
   });
   const [searchResult, setSearchResult] = useState<any>(null);
   const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -252,20 +253,53 @@ export default function CollectionPage() {
 
     for (const item of items) {
       try {
-        const price = await getCardPrice(item.card_name, item.game, item.expansion, item.is_foil, item.card_name_en);
+        let currentItem = item;
+
+        // Backfill set_code et card_name_en si manquants (Magic uniquement pour Scryfall)
+        if (item.game === 'magic' && (!item.set_code || !item.card_name_en)) {
+          const match = await getEnglishName(item.card_name, 'magic', item.expansion);
+          if (match && !Array.isArray(match)) {
+            const { data: updatedItem } = await supabase
+              .from('inventory_items')
+              .update({
+                set_code: match.set_code,
+                card_name_en: match.name_en,
+                expansion: match.expansion_en
+              })
+              .eq('id', item.id)
+              .select()
+              .single();
+            if (updatedItem) currentItem = updatedItem;
+          }
+        }
+
+        const price = await getCardPrice(
+          currentItem.card_name,
+          currentItem.game,
+          currentItem.expansion,
+          currentItem.is_foil,
+          currentItem.card_name_en,
+          currentItem.set_code
+        );
+
         totalChecked++;
         if (price !== null) {
-          const { error } = await supabase
+          // Historisation du prix si différent du dernier prix marché
+          if (price !== item.last_market_price) {
+            await supabase.from('price_history').insert({
+              inventory_item_id: item.id,
+              price: price
+            });
+            updatedCount++;
+          }
+
+          await supabase
             .from('inventory_items')
             .update({
               last_market_price: price,
-              updated_at: new Date().toISOString() // On force l'update du timestamp si possible
+              updated_at: new Date().toISOString()
             })
             .eq('id', item.id);
-
-          if (!error && price !== item.last_market_price) {
-            updatedCount++;
-          }
         }
       } catch (err) {
         console.error(`Erreur maj prix pour ${item.card_name}:`, err);
@@ -288,6 +322,7 @@ export default function CollectionPage() {
       card_name: res.name_en, // On met à jour le nom par le nom anglais trouvé
       card_name_en: res.name_en,
       expansion: res.expansion_en,
+      set_code: res.set_code || '',
       color: res.color || '',
       card_type: res.card_type || '',
     });
@@ -319,6 +354,7 @@ export default function CollectionPage() {
 
     const finalNameEn = searchResult?.name_en || newItem.card_name_en || newItem.card_name;
     const finalExpansion = searchResult?.expansion_en || newItem.expansion;
+    const finalSetCode = searchResult?.set_code || (newItem as any).set_code || '';
     const imageUrl = await getCardThumbnail(finalNameEn, newItem.game);
 
     const { error } = await supabase.from('inventory_items').insert([{
@@ -326,6 +362,7 @@ export default function CollectionPage() {
       card_name: newItem.card_name,
       card_name_en: finalNameEn,
       expansion: finalExpansion,
+      set_code: finalSetCode,
       game: newItem.game,
       listed_price: parseFloat(newItem.listed_price) || 0,
       quantity: parseInt(newItem.quantity) || 1,
@@ -357,6 +394,7 @@ export default function CollectionPage() {
         language: 'Français',
         color: '',
         card_type: '',
+        set_code: '',
       });
       fetchInventory();
     }
@@ -402,9 +440,10 @@ export default function CollectionPage() {
           game = 'pokemon';
         }
 
-        // Rapprochement API pour le nom anglais et l'illustration
+        // Rapprochement API pour le nom anglais, set_code et l'illustration
         let nameEn = name;
         let expansionEn = expansion;
+        let setCode = '';
         let imageUrl = null;
 
         try {
@@ -412,9 +451,11 @@ export default function CollectionPage() {
           if (match && !Array.isArray(match)) {
             nameEn = match.name_en;
             expansionEn = match.expansion_en || expansion;
+            setCode = match.set_code || '';
           } else if (Array.isArray(match)) {
             nameEn = match[0].name_en;
             expansionEn = match[0].expansion_en || expansion;
+            setCode = match[0].set_code || '';
           }
           imageUrl = await getCardThumbnail(nameEn, game);
         } catch (err) {
@@ -426,6 +467,7 @@ export default function CollectionPage() {
           card_name: name,
           card_name_en: nameEn,
           expansion: expansionEn,
+          set_code: setCode,
           game: game,
           listed_price: price,
           last_market_price: price,
@@ -1156,9 +1198,10 @@ export default function CollectionPage() {
                         ...newItem,
                         expansion: v,
                         card_name_en: ed?.name_en || newItem.card_name_en,
+                          set_code: ed?.code || (newItem as any).set_code || '',
                         color: ed?.color || newItem.color,
                         card_type: ed?.card_type || newItem.card_type
-                      });
+                        } as any);
                     }}
                   >
                     <SelectTrigger className="w-full">

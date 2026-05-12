@@ -4,6 +4,7 @@ export interface CardSearchResult {
   color?: string;
   card_type?: string;
   image_url?: string;
+  set_code?: string;
   all_editions?: {
     name: string,
     code?: string,
@@ -42,6 +43,7 @@ export async function getEnglishName(name: string, game: string, expansion?: str
         return {
           name_en: bestMatch.name,
           expansion_en: bestMatch.set_name,
+          set_code: bestMatch.set,
           color: bestMatch.colors?.join(', ') || bestMatch.mana_cost,
           card_type: bestMatch.type_line,
           image_url: bestMatch.image_uris?.small || bestMatch.image_uris?.normal,
@@ -79,6 +81,7 @@ export async function getEnglishName(name: string, game: string, expansion?: str
         return {
           name_en: fuzzyData.name,
           expansion_en: fuzzyData.set_name,
+          set_code: fuzzyData.set,
           color: fuzzyData.colors?.join(', '),
           card_type: fuzzyData.type_line
         };
