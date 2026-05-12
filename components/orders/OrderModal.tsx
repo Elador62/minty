@@ -34,7 +34,9 @@ export function OrderModal({ order, isOpen, onClose, onRefresh }: OrderModalProp
     shipping_cost: order?.shipping_cost || 0,
     shipping_method: order?.shipping_method || "Lettre Verte(max. 20g)",
     status: order?.status || "paid",
-    is_trust_service: order?.is_trust_service || false
+    is_trust_service: order?.is_trust_service || false,
+    shipped_at: order?.shipped_at ? new Date(order.shipped_at).toISOString().split('T')[0] : "",
+    delivered_at: order?.delivered_at ? new Date(order.delivered_at).toISOString().split('T')[0] : ""
   });
   const [items, setItems] = useState<any[]>(order?.order_items || []);
   const [inventorySearch, setInventorySearch] = useState("");
@@ -100,15 +102,21 @@ export function OrderModal({ order, isOpen, onClose, onRefresh }: OrderModalProp
 
       let orderId = order?.id;
 
+      const submissionData = {
+        ...formData,
+        shipped_at: formData.shipped_at ? new Date(formData.shipped_at).toISOString() : null,
+        delivered_at: formData.delivered_at ? new Date(formData.delivered_at).toISOString() : null,
+      };
+
       if (orderId) {
         // Update
-        const { error } = await supabase.from('orders').update({ ...formData }).eq('id', orderId);
+        const { error } = await supabase.from('orders').update(submissionData).eq('id', orderId);
         if (error) throw error;
         const { error: deleteError } = await supabase.from('order_items').delete().eq('order_id', orderId);
         if (deleteError) throw deleteError;
       } else {
         // Create
-        const { data, error } = await supabase.from('orders').insert({ ...formData, user_id: user.id }).select().single();
+        const { data, error } = await supabase.from('orders').insert({ ...submissionData, user_id: user.id }).select().single();
         if (error) throw error;
         orderId = data.id;
       }
@@ -191,6 +199,14 @@ export function OrderModal({ order, isOpen, onClose, onRefresh }: OrderModalProp
               onCheckedChange={(checked) => setFormData({...formData, is_trust_service: !!checked})}
             />
             <Label htmlFor="trust" className="font-bold text-red-600">TIERS DE CONFIANCE (THRUST)</Label>
+          </div>
+          <div className="space-y-2">
+            <Label>Date d'expédition</Label>
+            <Input type="date" value={formData.shipped_at} onChange={e => setFormData({...formData, shipped_at: e.target.value})} />
+          </div>
+          <div className="space-y-2">
+            <Label>Date de réception</Label>
+            <Input type="date" value={formData.delivered_at} onChange={e => setFormData({...formData, delivered_at: e.target.value})} />
           </div>
         </div>
 

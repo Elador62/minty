@@ -64,8 +64,9 @@ import { getCardMarketUrl } from "@/lib/cardmarket/urls";
 import { getEnglishName } from "@/lib/cardmarket/search";
 import { getLanguageFlag, SUPPORTED_LANGUAGES } from "@/lib/utils/languages";
 
-function CardDetailsContent({ item, history }: { item: any, history: any[] }) {
+function CardDetailsContent({ item, history, onRefreshPrice }: { item: any, history: any[], onRefreshPrice?: (item: any) => Promise<void> }) {
   if (!item) return null;
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   return (
     <div className="py-6 space-y-8">
@@ -97,7 +98,23 @@ function CardDetailsContent({ item, history }: { item: any, history: any[] }) {
             </div>
             <div>
               <p className="text-muted-foreground">Prix Marché</p>
-              <p className="font-bold text-lg text-green-600">{Number(item.last_market_price).toFixed(2)} €</p>
+              <div className="flex items-center gap-2">
+                <p className="font-bold text-lg text-green-600">{Number(item.last_market_price).toFixed(2)} €</p>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  disabled={isRefreshing}
+                  onClick={async () => {
+                    setIsRefreshing(true);
+                    if (onRefreshPrice) await onRefreshPrice(item);
+                    setIsRefreshing(false);
+                  }}
+                  title="Actualiser le prix Trend"
+                >
+                  <RefreshCw className={`h-3 w-3 ${isRefreshing ? 'animate-spin' : ''}`} />
+                </Button>
+              </div>
             </div>
           </div>
         </div>
@@ -110,7 +127,13 @@ function CardDetailsContent({ item, history }: { item: any, history: any[] }) {
         ) : (
           <div className="space-y-3">
             {history.map((h) => (
-              <div key={h.id} className="flex justify-between items-center p-3 bg-slate-50 rounded-lg border">
+              <div
+                key={h.id}
+                className="flex justify-between items-center p-3 bg-slate-50 rounded-lg border cursor-pointer hover:bg-slate-100 transition-colors"
+                onClick={() => {
+                  window.location.href = `/suivi?orderId=${h.orders.id}`;
+                }}
+              >
                 <div className="space-y-1">
                   <p className="text-sm font-bold">{h.orders.buyer_name}</p>
                   <p className="text-[10px] text-muted-foreground">#{h.orders.external_order_id} • {new Date(h.orders.created_at).toLocaleDateString()}</p>
@@ -160,6 +183,7 @@ export default function CollectionPage() {
   const [orderHistory, setOrderHistory] = useState<any[]>([]);
   const [userSettings, setUserSettings] = useState<any>(null);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [isUpdatePriceDialogOpen, setIsUpdatePriceDialogOpen] = useState(false);
   const [newItem, setNewItem] = useState({
     card_name: '',
     card_name_en: '',
@@ -236,7 +260,22 @@ export default function CollectionPage() {
 
   useEffect(() => {
     fetchSettings();
-    fetchInventory();
+    fetchInventory().then(() => {
+      // Check for item ID in URL to open details
+      const params = new URLSearchParams(window.location.search);
+      const itemId = params.get('id');
+      if (itemId) {
+        const item = items.find(i => i.id === itemId);
+        if (item) {
+          handleShowDetails(item);
+        } else {
+          // If not in current page, we might need to fetch it specifically
+          supabase.from('inventory_items').select('*').eq('id', itemId).single().then(({ data }) => {
+            if (data) handleShowDetails(data);
+          });
+        }
+      }
+    });
   }, [currentPage, pageSize, filters, sortBy, sortOrder]);
 
   // Reset page when filters change
@@ -244,26 +283,98 @@ export default function CollectionPage() {
     setCurrentPage(1);
   }, [filters, sortBy, sortOrder, pageSize]);
 
-  const handleUpdatePrices = async () => {
+  const handleRefreshSinglePrice = async (item: any) => {
+    try {
+      let currentItem = item;
+      if (item.game === 'magic' && (!item.set_code || !item.card_name_en)) {
+        const match = await getEnglishName(item.card_name, 'magic', item.expansion);
+        if (match && !Array.isArray(match)) {
+          const { data: updatedItem } = await supabase
+            .from('inventory_items')
+            .update({
+              set_code: match.set_code,
+              card_name_en: match.name_en,
+              expansion: match.expansion_en
+            })
+            .eq('id', item.id)
+            .select()
+            .single();
+          if (updatedItem) currentItem = updatedItem;
+        }
+      }
+
+      const price = await getCardPrice(
+        currentItem.card_name,
+        currentItem.game,
+        currentItem.expansion,
+        currentItem.is_foil,
+        currentItem.card_name_en,
+        currentItem.set_code
+      );
+
+      if (price !== null) {
+        if (price !== item.last_market_price) {
+          await supabase.from('price_history').insert({
+            inventory_item_id: item.id,
+            price: price
+          });
+        }
+
+        const { data: finalItem } = await supabase
+          .from('inventory_items')
+          .update({
+            last_market_price: price,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', item.id)
+          .select()
+          .single();
+
+        if (finalItem) {
+          setSelectedItem(finalItem);
+          setItems(prev => prev.map(i => i.id === finalItem.id ? finalItem : i));
+        }
+        toast({ title: "Prix actualisé", description: `${item.card_name}: ${price}€` });
+      }
+    } catch (err) {
+      console.error(`Erreur maj prix pour ${item.card_name}:`, err);
+    }
+  };
+
+  const handleUpdatePrices = async (mode: 'all' | 'displayed' | 'selected') => {
     setIsRefreshing(true);
+    setIsUpdatePriceDialogOpen(false);
     let updatedCount = 0;
     let totalChecked = 0;
 
-    // Récupérer TOUTES les cartes non archivées pour la mise à jour
-    const { data: allItems, error: fetchError } = await supabase
-      .from('inventory_items')
-      .select('*')
-      .eq('is_archived', false);
+    let itemsToUpdate: any[] = [];
 
-    if (fetchError || !allItems) {
-      toast({ title: "Erreur", description: "Impossible de récupérer l'inventaire complet.", variant: "destructive" });
+    if (mode === 'all') {
+      const { data: allItems, error: fetchError } = await supabase
+        .from('inventory_items')
+        .select('*')
+        .eq('is_archived', false);
+
+      if (fetchError || !allItems) {
+        toast({ title: "Erreur", description: "Impossible de récupérer l'inventaire complet.", variant: "destructive" });
+        setIsRefreshing(false);
+        return;
+      }
+      itemsToUpdate = allItems;
+    } else if (mode === 'displayed') {
+      itemsToUpdate = items;
+    } else if (mode === 'selected') {
+      itemsToUpdate = items.filter(i => selectedIds.includes(i.id));
+    }
+
+    if (itemsToUpdate.length === 0) {
       setIsRefreshing(false);
       return;
     }
 
-    toast({ title: "Mise à jour lancée", description: `Analyse de ${allItems.length} cartes...` });
+    toast({ title: "Mise à jour lancée", description: `Analyse de ${itemsToUpdate.length} cartes...` });
 
-    for (const item of allItems) {
+    for (const item of itemsToUpdate) {
       try {
         let currentItem = item;
 
@@ -443,6 +554,7 @@ export default function CollectionPage() {
         const price = parseFloat(cleanParts[14].replace(',', '.')) || 0;
         const quantity = parseInt(cleanParts[16]) || 0;
         const cmUrl = cleanParts[cleanParts.length - 2];
+        const productUrl = cleanParts[cleanParts.length - 1]; // ProductUrl is usually last
         const externalId = cleanParts[0];
         const rarity = cleanParts[7];
 
@@ -486,6 +598,7 @@ export default function CollectionPage() {
           quantity: quantity,
           condition: condition,
           cardmarket_url: cmUrl,
+          product_url: productUrl,
           external_id: externalId,
           rarity: rarity,
           image_url: imageUrl,
@@ -734,7 +847,7 @@ export default function CollectionPage() {
              {viewMode === 'table' ? <LayoutDashboard className="h-4 w-4 mr-2" /> : <ListIcon className="h-4 w-4 mr-2" />}
              {viewMode === 'table' ? 'Mode Cartes' : 'Mode Liste'}
           </Button>
-          <Button onClick={handleUpdatePrices} disabled={isRefreshing || items.length === 0}>
+          <Button onClick={() => setIsUpdatePriceDialogOpen(true)} disabled={isRefreshing || items.length === 0}>
             <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} /> Actualiser Prix
           </Button>
           <Button variant="ghost" size="icon" asChild title="Debug APIs de prix">
@@ -882,7 +995,10 @@ export default function CollectionPage() {
                               </div>
                             </TableCell>
                             <TableCell className="font-medium">
-                              <div className="flex items-center gap-2">
+                              <div
+                                className="flex items-center gap-2 cursor-pointer hover:text-primary"
+                                onClick={() => handleShowDetails(item)}
+                              >
                                 {item.card_name}
                                 <span title={item.language}>{getLanguageFlag(item.language)}</span>
                                 {item.is_foil && <Badge className="bg-purple-100 text-purple-700 text-[10px] h-4 py-0">Foil</Badge>}
@@ -913,7 +1029,7 @@ export default function CollectionPage() {
                                <div className="flex justify-end gap-1">
                                   <Button variant="ghost" size="sm" asChild title="Voir sur CardMarket">
                                     <a
-                                      href={getCardMarketUrl(item)}
+                                      href={item.product_url || getCardMarketUrl(item)}
                                       target="_blank"
                                       rel="noopener noreferrer"
                                     >
@@ -991,7 +1107,10 @@ export default function CollectionPage() {
                         )}
                       </div>
                       <CardContent className="p-3">
-                        <p className="font-bold text-sm truncate flex items-center gap-1">
+                        <p
+                          className="font-bold text-sm truncate flex items-center gap-1 cursor-pointer hover:text-primary"
+                          onClick={() => handleShowDetails(item)}
+                        >
                           <span className="truncate flex-1">{item.card_name}</span>
                           <span className="text-xs">{getLanguageFlag(item.language)}</span>
                         </p>
@@ -1002,7 +1121,7 @@ export default function CollectionPage() {
                         </div>
                         <div className="mt-2 pt-2 border-t flex justify-between items-center">
                            <Button variant="ghost" size="sm" className="h-7 px-2 text-[10px]" asChild>
-                              <a href={getCardMarketUrl(item)} target="_blank" rel="noopener noreferrer">
+                              <a href={item.product_url || getCardMarketUrl(item)} target="_blank" rel="noopener noreferrer">
                                 CM <ExternalLink className="ml-1 h-3 w-3" />
                               </a>
                            </Button>
@@ -1111,7 +1230,7 @@ export default function CollectionPage() {
               <SheetTitle>{selectedItem?.card_name}</SheetTitle>
               <SheetDescription>{selectedItem?.expansion}</SheetDescription>
             </SheetHeader>
-            <CardDetailsContent item={selectedItem} history={orderHistory} />
+            <CardDetailsContent item={selectedItem} history={orderHistory} onRefreshPrice={handleRefreshSinglePrice} />
           </SheetContent>
         </Sheet>
       ) : (
@@ -1121,10 +1240,33 @@ export default function CollectionPage() {
               <DialogTitle>{selectedItem?.card_name}</DialogTitle>
               <DialogDescription>{selectedItem?.expansion}</DialogDescription>
             </DialogHeader>
-            <CardDetailsContent item={selectedItem} history={orderHistory} />
+            <CardDetailsContent item={selectedItem} history={orderHistory} onRefreshPrice={handleRefreshSinglePrice} />
           </DialogContent>
         </Dialog>
       )}
+
+      {/* DIALOG ACTUALISATION PRIX */}
+      <Dialog open={isUpdatePriceDialogOpen} onOpenChange={setIsUpdatePriceDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Actualiser les prix</DialogTitle>
+            <DialogDescription>
+              Quelles cartes souhaitez-vous actualiser ? L'opération peut prendre du temps.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <Button variant="outline" onClick={() => handleUpdatePrices('all')}>
+              Toutes les cartes ({totalCount})
+            </Button>
+            <Button variant="outline" onClick={() => handleUpdatePrices('displayed')}>
+              Cartes affichées à l'écran ({items.length})
+            </Button>
+            <Button variant="outline" onClick={() => handleUpdatePrices('selected')} disabled={selectedIds.length === 0}>
+              Cartes sélectionnées ({selectedIds.length})
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* MODAL ÉDITION */}
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>

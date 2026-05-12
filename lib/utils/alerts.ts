@@ -90,5 +90,37 @@ export async function getActiveAlerts(supabase: ReturnType<typeof createClient>)
     });
   }
 
+  // 5. Stock Alerts
+  const { data: stockOrders } = await supabase
+    .from('orders')
+    .select('*, order_items(*)')
+    .in('status', ['paid', 'ready', 'preparing']);
+
+  const { data: inventory } = await supabase
+    .from('inventory_items')
+    .select('card_name, expansion, quantity')
+    .eq('is_archived', false);
+
+  if (stockOrders && inventory) {
+    stockOrders.forEach(order => {
+      const stockIssues = order.order_items?.filter((item: any) => {
+        const inv = inventory.find(i => i.card_name === item.card_name && i.expansion === item.expansion);
+        return !inv || inv.quantity < item.quantity;
+      }) || [];
+
+      if (stockIssues.length > 0) {
+        alerts.push({
+          id: `stock-${order.id}`,
+          type: 'stock',
+          title: `Stock insuffisant - Commande #${order.external_order_id}`,
+          description: `${stockIssues.length} article(s) en rupture ou quantité insuffisante pour préparer cette commande.`,
+          date: order.created_at,
+          severity: 'red',
+          metadata: { order, stockIssues }
+        });
+      }
+    });
+  }
+
   return alerts;
 }
