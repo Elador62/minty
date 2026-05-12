@@ -69,41 +69,43 @@ function CardDetailsContent({ item, history, onRefreshPrice }: { item: any, hist
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   return (
-    <div className="py-6 space-y-8">
-      <div className="flex gap-6">
-        <div className="w-40 h-56 bg-slate-100 rounded-lg overflow-hidden flex-shrink-0">
+    <div className="py-4 md:py-6 space-y-6 md:space-y-8">
+      <div className="flex flex-col sm:flex-row gap-6">
+        <div className="w-40 h-56 bg-slate-100 rounded-lg overflow-hidden flex-shrink-0 self-center sm:self-start">
           {item.image_url && <img src={item.image_url} alt="" className="w-full h-full object-cover" />}
         </div>
         <div className="space-y-4 flex-1">
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
-              <p className="text-muted-foreground">TCG</p>
+              <p className="text-muted-foreground text-xs uppercase font-bold">TCG</p>
               <p className="font-bold capitalize">{item.game}</p>
             </div>
             <div>
-              <p className="text-muted-foreground">Édition</p>
-              <p className="font-bold">{item.expansion}</p>
+              <p className="text-muted-foreground text-xs uppercase font-bold">Édition</p>
+              <p className="font-bold truncate" title={item.expansion}>{item.expansion}</p>
             </div>
             <div>
-              <p className="text-muted-foreground">État / Langue</p>
-              <p className="font-bold">{item.condition} / {getLanguageFlag(item.language)}</p>
+              <p className="text-muted-foreground text-xs uppercase font-bold">État / Langue</p>
+              <p className="font-bold flex items-center gap-2">
+                {item.condition} <span className="text-base">{getLanguageFlag(item.language)}</span>
+              </p>
             </div>
             <div>
-              <p className="text-muted-foreground">Stockage</p>
+              <p className="text-muted-foreground text-xs uppercase font-bold">Stockage</p>
               <p className="font-bold">{item.storage_location || 'Non défini'}</p>
             </div>
             <div>
-              <p className="text-muted-foreground">Prix Listé</p>
+              <p className="text-muted-foreground text-xs uppercase font-bold">Prix Listé</p>
               <p className="font-bold text-lg">{Number(item.listed_price).toFixed(2)} €</p>
             </div>
             <div>
-              <p className="text-muted-foreground">Prix Marché</p>
+              <p className="text-muted-foreground text-xs uppercase font-bold">Prix Marché</p>
               <div className="flex items-center gap-2">
                 <p className="font-bold text-lg text-green-600">{Number(item.last_market_price).toFixed(2)} €</p>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-6 w-6"
+                  className="h-7 w-7"
                   disabled={isRefreshing}
                   onClick={async () => {
                     setIsRefreshing(true);
@@ -112,7 +114,7 @@ function CardDetailsContent({ item, history, onRefreshPrice }: { item: any, hist
                   }}
                   title="Actualiser le prix Trend"
                 >
-                  <RefreshCw className={`h-3 w-3 ${isRefreshing ? 'animate-spin' : ''}`} />
+                  <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
                 </Button>
               </div>
             </div>
@@ -121,7 +123,7 @@ function CardDetailsContent({ item, history, onRefreshPrice }: { item: any, hist
       </div>
 
       <div className="space-y-4">
-        <h4 className="font-bold border-b pb-2">Historique des Commandes</h4>
+        <h4 className="font-bold border-b pb-2 text-base">Historique des Commandes</h4>
         {history.length === 0 ? (
           <p className="text-sm text-muted-foreground italic">Aucune commande trouvée pour cette configuration exacte.</p>
         ) : (
@@ -134,13 +136,13 @@ function CardDetailsContent({ item, history, onRefreshPrice }: { item: any, hist
                   window.location.href = `/suivi?orderId=${h.orders.id}`;
                 }}
               >
-                <div className="space-y-1">
-                  <p className="text-sm font-bold">{h.orders.buyer_name}</p>
+                <div className="space-y-1 min-w-0">
+                  <p className="text-sm font-bold truncate">{h.orders.buyer_name}</p>
                   <p className="text-[10px] text-muted-foreground">#{h.orders.external_order_id} • {new Date(h.orders.created_at).toLocaleDateString()}</p>
                 </div>
-                <div className="text-right">
-                  <p className="font-bold">{Number(h.price).toFixed(2)} €</p>
-                  <Badge variant="outline" className="text-[10px] h-5">{h.orders.status}</Badge>
+                <div className="text-right shrink-0">
+                  <p className="font-bold text-sm">{Number(h.price).toFixed(2)} €</p>
+                  <Badge variant="outline" className="text-[10px] h-5 px-1 capitalize">{h.orders.status}</Badge>
                 </div>
               </div>
             ))}
@@ -266,6 +268,7 @@ export default function CollectionPage() {
       const params = new URLSearchParams(window.location.search);
       const itemId = params.get('id');
       if (itemId) {
+        // Search in items first
         const item = items.find(i => i.id === itemId);
         if (item) {
           handleShowDetails(item);
@@ -814,29 +817,29 @@ export default function CollectionPage() {
   }
 
   return (
-    <div className="container mx-auto py-10 space-y-8">
-      <div className="flex justify-between items-center">
-        <div className="flex items-center gap-4">
+    <div className="container mx-auto px-4 py-6 md:py-10 space-y-6 md:space-y-8">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full md:w-auto">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Ma Collection</h1>
-            <p className="text-muted-foreground text-sm">Gérez votre stock et suivez les prix du marché.</p>
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Ma Collection</h1>
+            <p className="text-muted-foreground text-xs md:text-sm">Gérez votre stock et suivez les prix du marché.</p>
           </div>
           {selectedIds.length > 0 && (
-            <div className="flex items-center gap-2 bg-slate-100 px-3 py-2 rounded-lg border border-slate-200 animate-in fade-in slide-in-from-left-4">
-              <span className="text-xs font-bold">{selectedIds.length} sélectionnée(s)</span>
+            <div className="flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200 animate-in fade-in slide-in-from-left-4 overflow-x-auto max-w-full">
+              <span className="text-[10px] md:text-xs font-bold shrink-0">{selectedIds.length} sélectionnée(s)</span>
               <Button
                 variant="destructive"
                 size="sm"
-                className="h-8"
+                className="h-7 md:h-8 text-[10px] md:text-xs shrink-0"
                 onClick={() => handleArchiveItem(selectedIds, !filters.showArchived)}
               >
-                {filters.showArchived ? <Undo className="h-4 w-4 mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
+                {filters.showArchived ? <Undo className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" /> : <Trash2 className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />}
                 {filters.showArchived ? 'Restaurer' : 'Archiver'}
               </Button>
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-8"
+                className="h-7 md:h-8 text-[10px] md:text-xs shrink-0"
                 onClick={() => setSelectedIds([])}
               >
                 Annuler
@@ -844,30 +847,34 @@ export default function CollectionPage() {
             </div>
           )}
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setIsImportModalOpen(true)}>
-             <Upload className="h-4 w-4 mr-2" /> Import CSV
+        <div className="flex flex-wrap gap-2 w-full md:w-auto">
+          <Button variant="outline" size="sm" className="grow md:grow-0" onClick={() => setIsImportModalOpen(true)}>
+             <Upload className="h-4 w-4 mr-1 md:mr-2" /> <span className="hidden sm:inline">Import CSV</span><span className="sm:hidden text-[10px]">Import</span>
           </Button>
-          <Button variant="outline" onClick={() => setIsAddModalOpen(true)}>
-             <Plus className="h-4 w-4 mr-2" /> Ajouter
+          <Button variant="outline" size="sm" className="grow md:grow-0" onClick={() => setIsAddModalOpen(true)}>
+             <Plus className="h-4 w-4 mr-1 md:mr-2" /> <span className="hidden sm:inline">Ajouter</span><span className="sm:hidden text-[10px]">Ajouter</span>
           </Button>
           {filters.showArchived && (
-            <Button variant="destructive" onClick={() => setIsDeleteTrashDialogOpen(true)}>
-              <Trash2 className="h-4 w-4 mr-2" /> Vider la corbeille
+            <Button variant="destructive" size="sm" className="grow md:grow-0" onClick={() => setIsDeleteTrashDialogOpen(true)}>
+              <Trash2 className="h-4 w-4 mr-1 md:mr-2" /> <span className="hidden sm:inline">Vider la corbeille</span><span className="sm:hidden text-[10px]">Vider</span>
             </Button>
           )}
-          <Button variant="outline" onClick={() => setFilters({...filters, showArchived: !filters.showArchived})}>
-             {filters.showArchived ? <LayoutDashboard className="h-4 w-4 mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
-             {filters.showArchived ? 'Voir Collection' : 'Voir Corbeille'}
+          <Button variant="outline" size="sm" className="grow md:grow-0" onClick={() => setFilters({...filters, showArchived: !filters.showArchived})}>
+             {filters.showArchived ? <LayoutDashboard className="h-4 w-4 mr-1 md:mr-2" /> : <Trash2 className="h-4 w-4 mr-1 md:mr-2" />}
+             <span className="hidden sm:inline">{filters.showArchived ? 'Voir Collection' : 'Voir Corbeille'}</span>
+             <span className="sm:hidden text-[10px]">{filters.showArchived ? 'Coll.' : 'Corb.'}</span>
           </Button>
-          <Button variant="outline" onClick={() => setViewMode(viewMode === 'table' ? 'cards' : 'table')}>
-             {viewMode === 'table' ? <LayoutDashboard className="h-4 w-4 mr-2" /> : <ListIcon className="h-4 w-4 mr-2" />}
-             {viewMode === 'table' ? 'Mode Cartes' : 'Mode Liste'}
+          <Button variant="outline" size="sm" className="grow md:grow-0" onClick={() => setViewMode(viewMode === 'table' ? 'cards' : 'table')}>
+             {viewMode === 'table' ? <LayoutDashboard className="h-4 w-4 mr-1 md:mr-2" /> : <ListIcon className="h-4 w-4 mr-1 md:mr-2" />}
+             <span className="hidden sm:inline">{viewMode === 'table' ? 'Mode Cartes' : 'Mode Liste'}</span>
+             <span className="sm:hidden text-[10px]">{viewMode === 'table' ? 'Cartes' : 'Liste'}</span>
           </Button>
-          <Button onClick={() => setIsUpdatePriceDialogOpen(true)} disabled={isRefreshing || items.length === 0}>
-            <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} /> Actualiser Prix
+          <Button size="sm" className="grow md:grow-0" onClick={() => setIsUpdatePriceDialogOpen(true)} disabled={isRefreshing || items.length === 0}>
+            <RefreshCw className={`mr-1 md:mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">Actualiser Prix</span>
+            <span className="sm:hidden text-[10px]">Prix</span>
           </Button>
-          <Button variant="ghost" size="icon" asChild title="Debug APIs de prix">
+          <Button variant="ghost" size="icon" className="h-8 w-8" asChild title="Debug APIs de prix">
              <Link href="/collection/debug-prices">
                 <Bug className="h-4 w-4 text-muted-foreground" />
              </Link>
@@ -877,7 +884,7 @@ export default function CollectionPage() {
 
       <Card className="bg-slate-50 border-slate-200">
         <CardContent className="p-4 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             <div className="space-y-1">
               <label className="text-[10px] font-bold uppercase text-muted-foreground">Recherche</label>
               <Input
@@ -915,12 +922,12 @@ export default function CollectionPage() {
             <div className="space-y-1">
               <label className="text-[10px] font-bold uppercase text-muted-foreground">Prix (€)</label>
               <div className="flex gap-2">
-                <Input placeholder="Min" type="number" value={filters.minPrice} onChange={(e) => setFilters({...filters, minPrice: e.target.value})} className="bg-white h-9" />
-                <Input placeholder="Max" type="number" value={filters.maxPrice} onChange={(e) => setFilters({...filters, maxPrice: e.target.value})} className="bg-white h-9" />
+                <Input placeholder="Min" type="number" value={filters.minPrice} onChange={(e) => setFilters({...filters, minPrice: e.target.value})} className="bg-white h-9 w-full" />
+                <Input placeholder="Max" type="number" value={filters.maxPrice} onChange={(e) => setFilters({...filters, maxPrice: e.target.value})} className="bg-white h-9 w-full" />
               </div>
             </div>
-            <div className="flex items-end gap-2 pr-4">
-               <div className="flex-1 space-y-1">
+            <div className="flex flex-col sm:flex-row items-end gap-2 pr-0 lg:pr-4">
+               <div className="w-full space-y-1">
                   <label className="text-[10px] font-bold uppercase text-muted-foreground">Affichage</label>
                   <Select value={pageSize.toString()} onValueChange={(v) => setPageSize(parseInt(v))}>
                     <SelectTrigger className="bg-white h-9"><SelectValue /></SelectTrigger>
@@ -932,7 +939,7 @@ export default function CollectionPage() {
                     </SelectContent>
                   </Select>
                </div>
-               <div className="flex-1 space-y-1">
+               <div className="w-full space-y-1">
                   <label className="text-[10px] font-bold uppercase text-muted-foreground">Grouper</label>
                   <Select value={groupBy} onValueChange={(v: any) => setGroupBy(v)}>
                     <SelectTrigger className="bg-white h-9"><SelectValue /></SelectTrigger>
@@ -944,7 +951,7 @@ export default function CollectionPage() {
                     </SelectContent>
                   </Select>
                </div>
-               <Button variant="ghost" size="sm" onClick={() => setFilters(initialFilters)} className="h-9 text-muted-foreground hover:text-primary">
+               <Button variant="ghost" size="sm" onClick={() => setFilters(initialFilters)} className="h-9 shrink-0 text-muted-foreground hover:text-primary">
                   <RotateCcw className="h-4 w-4" />
                </Button>
             </div>
@@ -952,16 +959,16 @@ export default function CollectionPage() {
         </CardContent>
       </Card>
 
-      <div className="space-y-10">
+      <div className="space-y-6 md:space-y-10">
         {Object.entries(groups).map(([groupName, groupItems]) => (
           <div key={groupName} className="space-y-4">
-            <h3 className="text-xl font-bold border-b pb-2 flex items-center gap-2">
+            <h3 className="text-lg md:text-xl font-bold border-b pb-2 flex items-center gap-2">
               {groupName} <Badge variant="secondary">{groupItems.length}</Badge>
             </h3>
 
             {viewMode === 'table' ? (
-              <Card>
-                <CardContent className="p-0">
+              <Card className="overflow-hidden">
+                <CardContent className="p-0 overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -971,26 +978,26 @@ export default function CollectionPage() {
                             onCheckedChange={toggleSelectAll}
                           />
                         </TableHead>
-                        <TableHead className="w-[80px]">Image</TableHead>
-                        <TableHead className="cursor-pointer hover:text-primary" onClick={() => handleSort('card_name')}>
+                        <TableHead className="w-[60px] md:w-[80px]">Image</TableHead>
+                        <TableHead className="cursor-pointer hover:text-primary min-w-[150px]" onClick={() => handleSort('card_name')}>
                           Nom {sortBy === 'card_name' && (sortOrder === 'asc' ? '↑' : '↓')}
                         </TableHead>
-                        <TableHead className="cursor-pointer hover:text-primary" onClick={() => handleSort('expansion')}>
+                        <TableHead className="cursor-pointer hover:text-primary min-w-[120px]" onClick={() => handleSort('expansion')}>
                           Édition {sortBy === 'expansion' && (sortOrder === 'asc' ? '↑' : '↓')}
                         </TableHead>
-                        <TableHead className="cursor-pointer hover:text-primary" onClick={() => handleSort('storage_location')}>
+                        <TableHead className="cursor-pointer hover:text-primary min-w-[100px] hidden sm:table-cell" onClick={() => handleSort('storage_location')}>
                           Stockage {sortBy === 'storage_location' && (sortOrder === 'asc' ? '↑' : '↓')}
                         </TableHead>
                         <TableHead className="text-right cursor-pointer hover:text-primary" onClick={() => handleSort('quantity')}>
                           Qté {sortBy === 'quantity' && (sortOrder === 'asc' ? '↑' : '↓')}
                         </TableHead>
-                        <TableHead className="text-right cursor-pointer hover:text-primary" onClick={() => handleSort('listed_price')}>
-                          Votre Prix {sortBy === 'listed_price' && (sortOrder === 'asc' ? '↑' : '↓')}
+                        <TableHead className="text-right cursor-pointer hover:text-primary hidden sm:table-cell" onClick={() => handleSort('listed_price')}>
+                          Prix {sortBy === 'listed_price' && (sortOrder === 'asc' ? '↑' : '↓')}
                         </TableHead>
                         <TableHead className="text-right cursor-pointer hover:text-primary" onClick={() => handleSort('last_market_price')}>
                           Marché {sortBy === 'last_market_price' && (sortOrder === 'asc' ? '↑' : '↓')}
                         </TableHead>
-                        <TableHead className="text-right w-[120px]">Actions</TableHead>
+                        <TableHead className="text-right w-[100px]">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -1007,44 +1014,44 @@ export default function CollectionPage() {
                               />
                             </TableCell>
                             <TableCell>
-                              <div className="w-10 h-14 bg-slate-100 rounded overflow-hidden">
+                              <div className="w-8 h-11 md:w-10 md:h-14 bg-slate-100 rounded overflow-hidden">
                                 {item.image_url && <img src={item.image_url} alt="" className="w-full h-full object-cover" />}
                               </div>
                             </TableCell>
                             <TableCell className="font-medium">
                               <div
-                                className="flex items-center gap-2 cursor-pointer hover:text-primary"
+                                className="flex flex-wrap items-center gap-2 cursor-pointer hover:text-primary group"
                                 onClick={() => handleShowDetails(item)}
                               >
-                                {item.card_name}
-                                <span title={item.language}>{getLanguageFlag(item.language)}</span>
-                                {item.is_foil && <Badge className="bg-purple-100 text-purple-700 text-[10px] h-4 py-0">Foil</Badge>}
+                                <span className="text-xs md:text-sm">{item.card_name}</span>
+                                <span title={item.language} className="text-base">{getLanguageFlag(item.language)}</span>
+                                {item.is_foil && <Badge className="bg-purple-100 text-purple-700 text-[8px] md:text-[10px] h-4 py-0 px-1">Foil</Badge>}
                               </div>
                             </TableCell>
-                            <TableCell>{item.expansion}</TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-1 text-muted-foreground">
+                            <TableCell className="text-xs md:text-sm max-w-[150px] truncate">{item.expansion}</TableCell>
+                            <TableCell className="hidden sm:table-cell">
+                              <div className="flex items-center gap-1 text-muted-foreground text-xs md:text-sm">
                                 <Box className="h-3 w-3" />
                                 {item.storage_location || '-'}
                               </div>
                             </TableCell>
                             <TableCell className="text-right font-bold">
-                              <Badge variant={item.quantity > 0 ? "secondary" : "destructive"}>{item.quantity}</Badge>
+                              <Badge variant={item.quantity > 0 ? "secondary" : "destructive"} className="text-[10px] md:text-xs px-1 md:px-2">{item.quantity}</Badge>
                             </TableCell>
-                            <TableCell className="text-right font-mono">{Number(item.listed_price).toFixed(2)} €</TableCell>
+                            <TableCell className="text-right font-mono text-xs md:text-sm hidden sm:table-cell">{Number(item.listed_price).toFixed(2)} €</TableCell>
                             <TableCell className="text-right">
                               <div className="flex flex-col items-end">
-                                <span className="font-mono font-bold">{Number(item.last_market_price).toFixed(2)} €</span>
-                                <div className={`flex items-center gap-1 text-[10px] font-bold ${diff > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                <span className="font-mono font-bold text-xs md:text-sm">{Number(item.last_market_price).toFixed(2)} €</span>
+                                <div className={`flex items-center gap-1 text-[8px] md:text-[10px] font-bold ${diff > 0 ? 'text-green-600' : 'text-red-600'}`}>
                                   {diff > 0 ? <TrendingUp className="h-2 w-2" /> : <TrendingDown className="h-2 w-2" />}
-                                  {diff.toFixed(1)}%
-                                  {isAlert && <AlertCircle className="h-3 w-3 text-orange-500 animate-pulse" />}
+                                  {Math.abs(diff).toFixed(1)}%
+                                  {isAlert && <AlertCircle className="h-3 w-3 text-orange-500 animate-pulse shrink-0" />}
                                 </div>
                               </div>
                             </TableCell>
                             <TableCell className="text-right">
                                <div className="flex justify-end gap-1">
-                                  <Button variant="ghost" size="sm" asChild title="Voir sur CardMarket">
+                                  <Button variant="ghost" size="icon" className="h-8 w-8 hidden md:inline-flex" asChild title="Voir sur CardMarket">
                                     <a
                                       href={item.product_url || getCardMarketUrl(item)}
                                       target="_blank"
@@ -1056,7 +1063,7 @@ export default function CollectionPage() {
 
                                   <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
-                                      <Button variant="ghost" size="sm">
+                                      <Button variant="ghost" size="icon" className="h-8 w-8">
                                         <MoreVertical className="h-4 w-4" />
                                       </Button>
                                     </DropdownMenuTrigger>
@@ -1066,6 +1073,11 @@ export default function CollectionPage() {
                                       </DropdownMenuItem>
                                       <DropdownMenuItem onClick={() => handleEditItem(item)}>
                                         <Edit className="h-4 w-4 mr-2" /> Modifier
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem asChild className="md:hidden">
+                                        <a href={item.product_url || getCardMarketUrl(item)} target="_blank" rel="noopener noreferrer">
+                                          <ExternalLink className="h-4 w-4 mr-2" /> CardMarket
+                                        </a>
                                       </DropdownMenuItem>
                                       <DropdownMenuItem
                                         className={item.is_archived ? "text-green-600" : "text-destructive"}
@@ -1097,72 +1109,72 @@ export default function CollectionPage() {
                 </CardContent>
               </Card>
             ) : (
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 md:gap-6">
                 {groupItems.map((item) => {
                   const diff = item.listed_price > 0 ? ((Number(item.last_market_price) - Number(item.listed_price)) / Number(item.listed_price)) * 100 : 0;
                   return (
                     <Card key={item.id} className="overflow-hidden group">
                       <div className="aspect-[3/4] relative bg-slate-100">
                         {item.image_url && <img src={item.image_url} alt="" className="w-full h-full object-contain" />}
-                        <div className="absolute top-2 left-2">
+                        <div className="absolute top-1.5 left-1.5">
                           <Checkbox
                             checked={selectedIds.includes(item.id)}
                             onCheckedChange={() => toggleSelect(item.id)}
-                            className="bg-white/90 data-[state=checked]:bg-primary"
+                            className="bg-white/90 data-[state=checked]:bg-primary h-4 w-4 md:h-5 md:w-5"
                           />
                         </div>
-                        <div className="absolute top-2 right-2 flex flex-col gap-1 items-end">
-                          <Badge className={diff > 0 ? 'bg-green-600' : 'bg-red-600'}>
+                        <div className="absolute top-1.5 right-1.5 flex flex-col gap-1 items-end">
+                          <Badge className={`${diff > 0 ? 'bg-green-600' : 'bg-red-600'} text-[8px] md:text-[10px] px-1 py-0 h-4 md:h-5`}>
                             {diff > 0 ? '+' : ''}{diff.toFixed(0)}%
                           </Badge>
-                          <Badge variant="secondary" className="bg-white/90">x{item.quantity}</Badge>
+                          <Badge variant="secondary" className="bg-white/90 text-[8px] md:text-[10px] px-1 py-0 h-4 md:h-5">x{item.quantity}</Badge>
                         </div>
                         {item.storage_location && (
-                          <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[10px] px-2 py-1 flex items-center gap-1">
-                            <Box className="h-3 w-3" /> {item.storage_location}
+                          <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[8px] md:text-[10px] px-2 py-1 flex items-center gap-1">
+                            <Box className="h-2 w-2 md:h-3 md:w-3" /> <span className="truncate">{item.storage_location}</span>
                           </div>
                         )}
                       </div>
-                      <CardContent className="p-3">
+                      <CardContent className="p-2 md:p-3">
                         <p
-                          className="font-bold text-sm truncate flex items-center gap-1 cursor-pointer hover:text-primary"
+                          className="font-bold text-xs md:text-sm truncate flex items-center gap-1 cursor-pointer hover:text-primary"
                           onClick={() => handleShowDetails(item)}
                         >
                           <span className="truncate flex-1">{item.card_name}</span>
-                          <span className="text-xs">{getLanguageFlag(item.language)}</span>
+                          <span className="text-base shrink-0">{getLanguageFlag(item.language)}</span>
                         </p>
-                        <p className="text-[10px] text-muted-foreground truncate">{item.expansion}</p>
+                        <p className="text-[9px] md:text-[10px] text-muted-foreground truncate">{item.expansion}</p>
                         <div className="mt-2 flex justify-between items-end">
-                          <span className="text-xs font-bold">{Number(item.listed_price).toFixed(2)}€</span>
-                          <span className="text-[10px] font-mono text-green-600 font-bold">{Number(item.last_market_price).toFixed(2)}€</span>
+                          <span className="text-[10px] md:text-xs font-bold">{Number(item.listed_price).toFixed(2)}€</span>
+                          <span className="text-[9px] md:text-[10px] font-mono text-green-600 font-bold">{Number(item.last_market_price).toFixed(2)}€</span>
                         </div>
                         <div className="mt-2 pt-2 border-t flex justify-between items-center">
-                           <Button variant="ghost" size="sm" className="h-7 px-2 text-[10px]" asChild>
+                           <Button variant="ghost" size="sm" className="h-6 md:h-7 px-1 md:px-2 text-[9px] md:text-[10px]" asChild>
                               <a href={item.product_url || getCardMarketUrl(item)} target="_blank" rel="noopener noreferrer">
-                                CM <ExternalLink className="ml-1 h-3 w-3" />
+                                CM <ExternalLink className="ml-1 h-2.5 w-2.5 md:h-3 md:w-3" />
                               </a>
                            </Button>
                            <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
-                                  <MoreVertical className="h-3 w-3" />
+                                <Button variant="ghost" size="icon" className="h-6 w-6 md:h-7 md:w-7">
+                                  <MoreVertical className="h-3 w-3 md:h-4 md:w-4" />
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
                                 <DropdownMenuItem onClick={() => handleShowDetails(item)}>
-                                  <Info className="h-3 w-3 mr-2" /> Détails
+                                  <Info className="h-3 w-3 md:h-4 md:w-4 mr-2" /> Détails
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => handleEditItem(item)}>
-                                  <Edit className="h-3 w-3 mr-2" /> Modifier
+                                  <Edit className="h-3 w-3 md:h-4 md:w-4 mr-2" /> Modifier
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                   className={item.is_archived ? "text-green-600" : "text-destructive"}
                                   onClick={() => handleArchiveItem(item.id, !item.is_archived)}
                                 >
                                   {item.is_archived ? (
-                                    <><Undo className="h-3 w-3 mr-2" /> Restaurer</>
+                                    <><Undo className="h-3 w-3 md:h-4 md:w-4 mr-2" /> Restaurer</>
                                   ) : (
-                                    <><Trash2 className="h-3 w-3 mr-2" /> Archiver</>
+                                    <><Trash2 className="h-3 w-3 md:h-4 md:w-4 mr-2" /> Archiver</>
                                   )}
                                 </DropdownMenuItem>
                                 {item.is_archived && (
@@ -1170,7 +1182,7 @@ export default function CollectionPage() {
                                     className="text-destructive font-bold"
                                     onClick={() => handleDeletePermanently(item.id)}
                                   >
-                                    <Trash2 className="h-3 w-3 mr-2" /> Supprimer définitivement
+                                    <Trash2 className="h-3 w-3 md:h-4 md:w-4 mr-2" /> Supprimer définitivement
                                   </DropdownMenuItem>
                                 )}
                               </DropdownMenuContent>
@@ -1187,27 +1199,28 @@ export default function CollectionPage() {
       </div>
 
       {/* PAGINATION */}
-      <div className="flex items-center justify-between mt-8 pb-10">
-        <p className="text-sm text-muted-foreground">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-8 pb-10">
+        <p className="text-xs md:text-sm text-muted-foreground order-2 sm:order-1">
           Affichage de {(currentPage - 1) * pageSize + 1} à {Math.min(currentPage * pageSize, totalCount)} sur {totalCount} cartes
         </p>
-        <div className="flex gap-2">
+        <div className="flex gap-1 md:gap-2 order-1 sm:order-2 overflow-x-auto max-w-full pb-2 sm:pb-0">
           <Button
             variant="outline"
             size="sm"
+            className="h-8 text-xs px-2"
             onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
             disabled={currentPage === 1}
           >
-            <ChevronLeft className="h-4 w-4 mr-2" /> Précédent
+            <ChevronLeft className="h-4 w-4 mr-1 sm:mr-2" /> <span className="hidden sm:inline">Précédent</span>
           </Button>
           <div className="flex items-center gap-1">
              {(() => {
                const totalPages = Math.ceil(totalCount / pageSize);
-               let startPage = Math.max(1, currentPage - 2);
-               let endPage = Math.min(totalPages, startPage + 4);
+               let startPage = Math.max(1, currentPage - 1);
+               let endPage = Math.min(totalPages, startPage + (totalPages > 5 ? 3 : totalPages));
 
-               if (endPage - startPage < 4) {
-                 startPage = Math.max(1, endPage - 4);
+               if (endPage - startPage < (totalPages > 5 ? 3 : totalPages - 1)) {
+                 startPage = Math.max(1, endPage - (totalPages > 5 ? 3 : totalPages - 1));
                }
 
                const pages = [];
@@ -1217,7 +1230,7 @@ export default function CollectionPage() {
                      key={i}
                      variant={currentPage === i ? "default" : "outline"}
                      size="sm"
-                     className="w-9"
+                     className="w-8 h-8 md:w-9 text-xs p-0"
                      onClick={() => setCurrentPage(i)}
                    >
                      {i}
@@ -1226,15 +1239,16 @@ export default function CollectionPage() {
                }
                return pages;
              })()}
-             {Math.ceil(totalCount / pageSize) > currentPage + 2 && <span className="px-2">...</span>}
+             {Math.ceil(totalCount / pageSize) > currentPage + 2 && <span className="px-1 md:px-2">...</span>}
           </div>
           <Button
             variant="outline"
             size="sm"
+            className="h-8 text-xs px-2"
             onClick={() => setCurrentPage(p => Math.min(Math.ceil(totalCount / pageSize), p + 1))}
             disabled={currentPage >= Math.ceil(totalCount / pageSize)}
           >
-            Suivant <ChevronRight className="h-4 w-4 ml-2" />
+            <span className="hidden sm:inline">Suivant</span> <ChevronRight className="h-4 w-4 ml-1 sm:ml-2" />
           </Button>
         </div>
       </div>
@@ -1242,20 +1256,20 @@ export default function CollectionPage() {
       {/* COMPOSANT DÉTAILS (MODAL OU SHEET) */}
       {userSettings?.card_view_mode === 'sheet' ? (
         <Sheet open={isDetailOpen} onOpenChange={setIsDetailOpen}>
-          <SheetContent className="sm:max-w-xl overflow-y-auto">
+          <SheetContent className="sm:max-w-xl overflow-y-auto w-[95%] sm:w-full">
             <SheetHeader>
               <SheetTitle>{selectedItem?.card_name}</SheetTitle>
-              <SheetDescription>{selectedItem?.expansion}</SheetDescription>
+              <SheetDescription className="truncate">{selectedItem?.expansion}</SheetDescription>
             </SheetHeader>
             <CardDetailsContent item={selectedItem} history={orderHistory} onRefreshPrice={handleRefreshSinglePrice} />
           </SheetContent>
         </Sheet>
       ) : (
         <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
-          <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto w-[95%] sm:w-full p-4 sm:p-6">
             <DialogHeader>
-              <DialogTitle>{selectedItem?.card_name}</DialogTitle>
-              <DialogDescription>{selectedItem?.expansion}</DialogDescription>
+              <DialogTitle className="text-lg md:text-xl">{selectedItem?.card_name}</DialogTitle>
+              <DialogDescription className="truncate">{selectedItem?.expansion}</DialogDescription>
             </DialogHeader>
             <CardDetailsContent item={selectedItem} history={orderHistory} onRefreshPrice={handleRefreshSinglePrice} />
           </DialogContent>
@@ -1264,14 +1278,14 @@ export default function CollectionPage() {
 
       {/* DIALOG VIDER CORBEILLE */}
       <Dialog open={isDeleteTrashDialogOpen} onOpenChange={setIsDeleteTrashDialogOpen}>
-        <DialogContent>
+        <DialogContent className="w-[95%] sm:w-full">
           <DialogHeader>
             <DialogTitle>Vider la corbeille</DialogTitle>
             <DialogDescription>
               Êtes-vous sûr de vouloir supprimer définitivement toutes les cartes de la corbeille ? Cette action est irréversible.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
             <Button variant="outline" onClick={() => setIsDeleteTrashDialogOpen(false)}>Annuler</Button>
             <Button variant="destructive" onClick={() => {
               handleEmptyTrash();
@@ -1283,7 +1297,7 @@ export default function CollectionPage() {
 
       {/* DIALOG ACTUALISATION PRIX */}
       <Dialog open={isUpdatePriceDialogOpen} onOpenChange={setIsUpdatePriceDialogOpen}>
-        <DialogContent>
+        <DialogContent className="w-[95%] sm:w-full">
           <DialogHeader>
             <DialogTitle>Actualiser les prix</DialogTitle>
             <DialogDescription>
@@ -1306,46 +1320,46 @@ export default function CollectionPage() {
 
       {/* MODAL ÉDITION */}
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[425px] w-[95%] sm:w-full overflow-y-auto max-h-[90vh]">
           <DialogHeader>
             <DialogTitle>Modifier la carte</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-4">
              <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="edit-name" className="text-right">Nom</Label>
-              <Input id="edit-name" value={newItem.card_name} onChange={e => setNewItem({...newItem, card_name: e.target.value})} className="col-span-3" />
+              <Label htmlFor="edit-name" className="text-right text-xs md:text-sm">Nom</Label>
+              <Input id="edit-name" value={newItem.card_name} onChange={e => setNewItem({...newItem, card_name: e.target.value})} className="col-span-3 h-9" />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="edit-expansion" className="text-right">Édition</Label>
-              <Input id="edit-expansion" value={newItem.expansion} onChange={e => setNewItem({...newItem, expansion: e.target.value})} className="col-span-3" />
+              <Label htmlFor="edit-expansion" className="text-right text-xs md:text-sm">Édition</Label>
+              <Input id="edit-expansion" value={newItem.expansion} onChange={e => setNewItem({...newItem, expansion: e.target.value})} className="col-span-3 h-9" />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="edit-price" className="text-right">Prix (€)</Label>
-              <Input id="edit-price" type="number" step="0.01" value={newItem.listed_price} onChange={e => setNewItem({...newItem, listed_price: e.target.value})} className="col-span-3" />
+              <Label htmlFor="edit-price" className="text-right text-xs md:text-sm">Prix (€)</Label>
+              <Input id="edit-price" type="number" step="0.01" value={newItem.listed_price} onChange={e => setNewItem({...newItem, listed_price: e.target.value})} className="col-span-3 h-9" />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="edit-quantity" className="text-right">Quantité</Label>
-              <Input id="edit-quantity" type="number" value={newItem.quantity} onChange={e => setNewItem({...newItem, quantity: e.target.value})} className="col-span-3" />
+              <Label htmlFor="edit-quantity" className="text-right text-xs md:text-sm">Qté</Label>
+              <Input id="edit-quantity" type="number" value={newItem.quantity} onChange={e => setNewItem({...newItem, quantity: e.target.value})} className="col-span-3 h-9" />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="edit-storage" className="text-right">Stockage</Label>
-              <Input id="edit-storage" placeholder="Ex: Boite A1" value={newItem.storage_location} onChange={e => setNewItem({...newItem, storage_location: e.target.value})} className="col-span-3" />
+              <Label htmlFor="edit-storage" className="text-right text-xs md:text-sm">Stockage</Label>
+              <Input id="edit-storage" placeholder="Ex: Boite A1" value={newItem.storage_location} onChange={e => setNewItem({...newItem, storage_location: e.target.value})} className="col-span-3 h-9" />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="edit-foil" className="text-right">Foil</Label>
+              <Label htmlFor="edit-foil" className="text-right text-xs md:text-sm">Foil</Label>
               <div className="col-span-3 flex items-center space-x-2">
                 <Checkbox
                   id="edit-foil"
                   checked={(newItem as any).is_foil}
                   onCheckedChange={(checked) => setNewItem({...newItem, is_foil: checked === true} as any)}
                 />
-                <label htmlFor="edit-foil" className="text-sm">Cette carte est brillante (Foil)</label>
+                <label htmlFor="edit-foil" className="text-xs md:text-sm">Carte brillante</label>
               </div>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="edit-language" className="text-right">Langue</Label>
+              <Label htmlFor="edit-language" className="text-right text-xs md:text-sm">Langue</Label>
               <Select value={newItem.language} onValueChange={v => setNewItem({...newItem, language: v})}>
-                <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="col-span-3 h-9"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {SUPPORTED_LANGUAGES.map(lang => (
                     <SelectItem key={lang} value={lang}>{lang}</SelectItem>
@@ -1354,9 +1368,9 @@ export default function CollectionPage() {
               </Select>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="edit-condition" className="text-right">État</Label>
+              <Label htmlFor="edit-condition" className="text-right text-xs md:text-sm">État</Label>
               <Select value={newItem.condition} onValueChange={v => setNewItem({...newItem, condition: v})}>
-                <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="col-span-3 h-9"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="MT">Mint (MT)</SelectItem>
                   <SelectItem value="NM">Near Mint (NM)</SelectItem>
@@ -1370,31 +1384,31 @@ export default function CollectionPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button onClick={handleUpdateItem}>Enregistrer les modifications</Button>
+            <Button onClick={handleUpdateItem} className="w-full">Enregistrer les modifications</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* MODAL AJOUT MANUEL */}
       <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
-        <DialogContent className="sm:max-w-[450px] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[450px] max-h-[90vh] overflow-y-auto w-[95%] sm:w-full">
           <DialogHeader>
             <DialogTitle>Ajouter une carte</DialogTitle>
-            <DialogDescription>Saisissez les détails de la carte à ajouter à votre collection.</DialogDescription>
+            <DialogDescription className="text-xs">Saisissez les détails de la carte à ajouter.</DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
+          <div className="grid gap-3 md:gap-4 py-4">
             <div className="flex flex-col gap-2">
-              <Label htmlFor="name">Nom de la carte</Label>
+              <Label htmlFor="name" className="text-xs md:text-sm font-bold uppercase text-muted-foreground">Nom de la carte</Label>
               <div className="flex gap-2 w-full items-center">
-                <Input id="name" className="grow" value={newItem.card_name} onChange={e => setNewItem({...newItem, card_name: e.target.value})} placeholder="Nom (FR ou EN)" />
-                <Button variant="outline" size="icon" className="shrink-0" onClick={handleSearchCard} disabled={isSearchingCard} title="Vérifier correspondance API">
+                <Input id="name" className="grow h-9" value={newItem.card_name} onChange={e => setNewItem({...newItem, card_name: e.target.value})} placeholder="Nom (FR ou EN)" />
+                <Button variant="outline" size="icon" className="shrink-0 h-9 w-9" onClick={handleSearchCard} disabled={isSearchingCard} title="Vérifier correspondance API">
                    <Search className={`h-4 w-4 ${isSearchingCard ? 'animate-spin' : ''}`} />
                 </Button>
               </div>
             </div>
             {searchResults.length > 0 && (
-              <div className="col-span-4 space-y-2 max-h-48 overflow-y-auto p-2 bg-slate-50 rounded border">
-                <p className="text-[10px] font-bold uppercase text-muted-foreground px-1">Résultats trouvés ({searchResults.length}) :</p>
+              <div className="space-y-2 max-h-48 overflow-y-auto p-2 bg-slate-50 rounded border">
+                <p className="text-[10px] font-bold uppercase text-muted-foreground px-1">Résultats ({searchResults.length}) :</p>
                 {searchResults.map((res, i) => (
                   <div
                     key={i}
@@ -1414,32 +1428,31 @@ export default function CollectionPage() {
             )}
 
             {searchResult && (
-              <div className="grid grid-cols-4 items-center gap-4 bg-green-50 p-2 rounded border border-green-200">
-                <div className="text-[10px] uppercase font-bold text-green-700 text-right">Match API</div>
-                <div className="col-span-3 flex items-center gap-3">
-                  <div className="w-8 h-12 bg-slate-200 rounded overflow-hidden flex-shrink-0">
-                    {searchResult.image_url && <img src={searchResult.image_url} alt="" className="w-full h-full object-cover" />}
-                  </div>
-                  <div className="text-xs text-green-700">
-                    <strong>{searchResult.name_en}</strong><br/>
-                    <span className="opacity-80">{searchResult.expansion_en}</span>
-                  </div>
+              <div className="flex items-center gap-3 bg-green-50 p-2 rounded border border-green-200">
+                <div className="w-8 h-12 bg-slate-200 rounded overflow-hidden flex-shrink-0">
+                  {searchResult.image_url && <img src={searchResult.image_url} alt="" className="w-full h-full object-cover" />}
                 </div>
+                <div className="text-xs text-green-700 min-w-0">
+                  <strong className="truncate block">{searchResult.name_en}</strong>
+                  <span className="opacity-80 truncate block">{searchResult.expansion_en}</span>
+                </div>
+                <Badge variant="outline" className="ml-auto bg-green-100 text-green-700 border-green-200 text-[8px] h-4">API Match</Badge>
               </div>
             )}
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="game" className="text-right">TCG</Label>
-              <Select value={newItem.game} onValueChange={v => setNewItem({...newItem, game: v})}>
-                <SelectTrigger className="col-span-3 h-9"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="magic">Magic</SelectItem>
-                  <SelectItem value="pokemon">Pokémon</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="expansion" className="text-right">Édition</Label>
-              <div className="col-span-3">
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <Label htmlFor="game" className="text-xs font-bold uppercase text-muted-foreground">TCG</Label>
+                <Select value={newItem.game} onValueChange={v => setNewItem({...newItem, game: v})}>
+                  <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="magic">Magic</SelectItem>
+                    <SelectItem value="pokemon">Pokémon</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="expansion" className="text-xs font-bold uppercase text-muted-foreground">Édition</Label>
                 {searchResult?.all_editions ? (
                   <Select
                     value={newItem.expansion}
@@ -1455,81 +1468,77 @@ export default function CollectionPage() {
                         } as any);
                     }}
                   >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Choisir une édition" />
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="Choisir" />
                     </SelectTrigger>
                     <SelectContent>
                       {searchResult.all_editions.map((ed: any) => (
                         <SelectItem key={ed.name} value={ed.name}>
-                          {ed.name} {ed.code ? `(${ed.code.toUpperCase()})` : ''}
+                          {ed.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 ) : (
-                  <Input id="expansion" value={newItem.expansion} onChange={e => setNewItem({...newItem, expansion: e.target.value})} placeholder="Ex: Dominaria" />
+                  <Input id="expansion" className="h-9" value={newItem.expansion} onChange={e => setNewItem({...newItem, expansion: e.target.value})} placeholder="Ex: Dominaria" />
                 )}
               </div>
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="price" className="text-right">Prix (€)</Label>
-              <Input id="price" type="number" step="0.01" value={newItem.listed_price} onChange={e => setNewItem({...newItem, listed_price: e.target.value})} className="col-span-3 h-9" />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="quantity" className="text-right">Quantité</Label>
-              <Input id="quantity" type="number" value={newItem.quantity} onChange={e => setNewItem({...newItem, quantity: e.target.value})} className="col-span-3 h-9" />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="storage" className="text-right">Stockage</Label>
-              <Input id="storage" placeholder="Ex: Boite A1" value={newItem.storage_location} onChange={e => setNewItem({...newItem, storage_location: e.target.value})} className="col-span-3 h-9" />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="color" className="text-right">Couleur</Label>
-              <Input id="color" placeholder="Ex: Rouge, Psy" value={newItem.color} onChange={e => setNewItem({...newItem, color: e.target.value})} className="col-span-3 h-9" />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="type" className="text-right">Type</Label>
-              <Input id="type" placeholder="Ex: Créature, Pokémon" value={newItem.card_type} onChange={e => setNewItem({...newItem, card_type: e.target.value})} className="col-span-3 h-9" />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="language" className="text-right">Langue</Label>
-              <Select value={newItem.language} onValueChange={v => setNewItem({...newItem, language: v})}>
-                <SelectTrigger className="col-span-3 h-9"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {SUPPORTED_LANGUAGES.map(lang => (
-                    <SelectItem key={lang} value={lang}>{lang}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="add-foil" className="text-right">Foil</Label>
-              <div className="col-span-3 flex items-center space-x-2">
-                <Checkbox
-                  id="add-foil"
-                  checked={(newItem as any).is_foil}
-                  onCheckedChange={(checked) => setNewItem({...newItem, is_foil: checked === true} as any)}
-                />
-                <label htmlFor="add-foil" className="text-sm">Cette carte est brillante (Foil)</label>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <Label htmlFor="price" className="text-xs font-bold uppercase text-muted-foreground">Prix (€)</Label>
+                <Input id="price" type="number" step="0.01" value={newItem.listed_price} onChange={e => setNewItem({...newItem, listed_price: e.target.value})} className="h-9" />
               </div>
+              <div className="space-y-1">
+                <Label htmlFor="quantity" className="text-xs font-bold uppercase text-muted-foreground">Quantité</Label>
+                <Input id="quantity" type="number" value={newItem.quantity} onChange={e => setNewItem({...newItem, quantity: e.target.value})} className="h-9" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <Label htmlFor="storage" className="text-xs font-bold uppercase text-muted-foreground">Stockage</Label>
+                <Input id="storage" placeholder="Ex: Boite A1" value={newItem.storage_location} onChange={e => setNewItem({...newItem, storage_location: e.target.value})} className="h-9" />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="language" className="text-xs font-bold uppercase text-muted-foreground">Langue</Label>
+                <Select value={newItem.language} onValueChange={v => setNewItem({...newItem, language: v})}>
+                  <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {SUPPORTED_LANGUAGES.map(lang => (
+                      <SelectItem key={lang} value={lang}>{lang}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-2 pt-2">
+              <Checkbox
+                id="add-foil"
+                checked={(newItem as any).is_foil}
+                onCheckedChange={(checked) => setNewItem({...newItem, is_foil: checked === true} as any)}
+              />
+              <label htmlFor="add-foil" className="text-xs font-bold uppercase text-muted-foreground cursor-pointer">Carte brillante (Foil)</label>
             </div>
           </div>
           <DialogFooter>
-            <Button onClick={handleAddItem}>Ajouter à la collection</Button>
+            <Button onClick={handleAddItem} className="w-full">Ajouter à la collection</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* MODAL IMPORT CSV */}
       <Dialog open={isImportModalOpen} onOpenChange={setIsImportModalOpen}>
-        <DialogContent>
+        <DialogContent className="w-[95%] sm:w-full">
           <DialogHeader>
             <DialogTitle>Importer depuis un CSV</DialogTitle>
-            <DialogDescription>Sélectionnez votre fichier d'inventaire personnel (format CardMarket semi-colon).</DialogDescription>
+            <DialogDescription className="text-xs">Format CardMarket semi-colon recommandé.</DialogDescription>
           </DialogHeader>
-          <div className="py-8 flex flex-col items-center justify-center border-2 border-dashed rounded-lg bg-slate-50">
-             <Upload className="h-10 w-10 text-muted-foreground mb-4" />
-             <p className="text-sm text-muted-foreground mb-4">Glissez-déposez votre fichier ici ou cliquez pour parcourir</p>
+          <div className="py-6 md:py-8 flex flex-col items-center justify-center border-2 border-dashed rounded-lg bg-slate-50">
+             <Upload className="h-8 w-8 md:h-10 md:w-10 text-muted-foreground mb-3 md:mb-4" />
+             <p className="text-xs md:text-sm text-muted-foreground mb-4 px-4 text-center">Sélectionnez votre fichier d'inventaire CardMarket</p>
              <input
                type="file"
                accept=".csv"
@@ -1537,7 +1546,7 @@ export default function CollectionPage() {
                ref={fileInputRef}
                onChange={handleImportCSV}
              />
-             <Button onClick={() => fileInputRef.current?.click()}>Choisir un fichier</Button>
+             <Button size="sm" onClick={() => fileInputRef.current?.click()}>Choisir un fichier</Button>
           </div>
         </DialogContent>
       </Dialog>

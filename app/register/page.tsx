@@ -21,12 +21,8 @@ export default function RegisterPage() {
     e.preventDefault();
     setIsLoading(true);
 
-    // On construit l'URL de redirection de manière robuste
-    // On enlève le trailing slash éventuel de l'origin pour éviter les doublons
     const origin = typeof window !== 'undefined' ? window.location.origin.replace(/\/$/, '') : '';
     const redirectTo = `${origin}/api/auth/callback`;
-
-    console.log("Tentative d'inscription avec redirection vers:", redirectTo);
 
     const { error } = await supabase.auth.signUp({
       email,
@@ -55,16 +51,16 @@ export default function RegisterPage() {
   return (
     <div className="flex items-center justify-center min-h-screen bg-slate-50 p-4">
       <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold">Inscription</CardTitle>
-          <CardDescription>
+        <CardHeader className="space-y-1 text-center sm:text-left">
+          <CardTitle className="text-xl md:text-2xl font-bold">Inscription</CardTitle>
+          <CardDescription className="text-xs md:text-sm">
             Créez votre compte Minty pour gérer vos ventes
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleRegister}>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <label htmlFor="email">Email</label>
+              <label htmlFor="email" className="text-sm">Email</label>
               <Input
                 id="email"
                 type="email"
@@ -72,21 +68,23 @@ export default function RegisterPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                className="h-10"
               />
             </div>
             <div className="space-y-2">
-              <label htmlFor="password">Mot de passe</label>
+              <label htmlFor="password" className="text-sm">Mot de passe</label>
               <Input
                 id="password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                className="h-10"
               />
             </div>
           </CardContent>
           <CardFooter className="flex flex-col space-y-4">
-            <Button type="submit" className="w-full" disabled={isLoading}>
+            <Button type="submit" className="w-full h-10" disabled={isLoading}>
               {isLoading ? "Création..." : "Créer un compte"}
             </Button>
             <p className="text-sm text-center text-muted-foreground">

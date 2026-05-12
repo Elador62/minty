@@ -47,10 +47,10 @@ export default function LoginPage() {
     <div className="flex items-center justify-center min-h-screen bg-slate-50 p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-4 flex flex-col items-center text-center">
-          <img src="/logo.png" alt="Minty Logo" className="h-48 w-auto mb-4" />
+          <img src="/logo.png" alt="Minty Logo" className="h-32 md:h-48 w-auto mb-2 md:mb-4" />
           <div className="space-y-1">
-            <CardTitle className="text-2xl font-bold">Connexion</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-xl md:text-2xl font-bold">Connexion</CardTitle>
+            <CardDescription className="text-xs md:text-sm">
               Entrez vos identifiants pour accéder à votre espace
             </CardDescription>
           </div>
@@ -58,7 +58,7 @@ export default function LoginPage() {
         <form onSubmit={handleLogin}>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <label htmlFor="email">Email</label>
+              <label htmlFor="email" className="text-sm">Email</label>
               <Input
                 id="email"
                 type="email"
@@ -66,21 +66,23 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                className="h-10"
               />
             </div>
             <div className="space-y-2">
-              <label htmlFor="password">Mot de passe</label>
+              <label htmlFor="password" className="text-sm">Mot de passe</label>
               <Input
                 id="password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                className="h-10"
               />
             </div>
           </CardContent>
           <CardFooter className="flex flex-col space-y-4">
-            <Button type="submit" className="w-full" disabled={isLoading}>
+            <Button type="submit" className="w-full h-10" disabled={isLoading}>
               {isLoading ? "Connexion..." : "Se connecter"}
             </Button>
             <p className="text-sm text-center text-muted-foreground">
