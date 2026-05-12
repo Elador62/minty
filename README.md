@@ -1,6 +1,18 @@
-# Minty - CardMarket Sales Manager (V0.9.4)
+# Minty - CardMarket Sales Manager (V0.9.5)
 
 Minty est un outil de gestion centralisé pour automatiser le suivi des ventes, la préparation des commandes et l'ajustement des prix CardMarket (Pokémon & Magic).
+
+## 🆕 Changelog V0.9.5
+### 📋 Suivi
+- **Date commande éditable** : La date de création de la commande (`created_at`) peut désormais être modifiée via le formulaire de commande.
+- **Barre de défilement Kanban** : La barre de défilement horizontale est maintenant accessible en haut de la zone Kanban pour une navigation facilitée.
+
+### 🎴 Collection
+- **Robustesse de l'import CSV** : Amélioration de la détection de la colonne `ProductUrl` par son nom d'en-tête, garantissant son stockage correct en base de données.
+- **Sécurité Corbeille** : Ajout d'une demande de confirmation avant de vider définitivement la corbeille.
+- **Recherche multilingue** : Le moteur de recherche Magic (Scryfall) supporte désormais les noms de cartes dans toutes les langues (Français, Anglais, etc.).
+- **Amélioration UI Ajout Carte** : Correction du champ de saisie du nom qui se réduisait anormalement lors du clic sur le bouton de recherche.
+- **Fiabilité des prix** : Correction et renforcement du stockage du prix marché (`last_market_price`) après actualisation.
 
 ## 🆕 Changelog V0.9.4
 ### 📋 Suivi

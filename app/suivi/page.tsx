@@ -288,8 +288,9 @@ export default function SuiviPage() {
   };
 
   const renderKanban = () => (
-    <ScrollArea className="w-full whitespace-nowrap rounded-md border bg-slate-50/50 [direction:rtl]">
-      <div className="[direction:ltr] pt-4">
+    <ScrollArea className="w-full whitespace-nowrap rounded-md border bg-slate-50/50 overflow-x-auto">
+      <ScrollBar orientation="horizontal" className="h-2" />
+      <div className="pt-4">
         <div className="flex w-max space-x-6 p-6 min-h-[700px]">
           {COLUMNS.map((col) => {
             const colOrders = getFilteredAndSortedOrders(orders.filter(o => o.status === col.id));
@@ -447,7 +448,6 @@ export default function SuiviPage() {
             );
           })}
         </div>
-        <ScrollBar orientation="horizontal" className="mt-[-16px] mb-4 h-3" />
       </div>
     </ScrollArea>
   );

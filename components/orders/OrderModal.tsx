@@ -35,6 +35,7 @@ export function OrderModal({ order, isOpen, onClose, onRefresh }: OrderModalProp
     shipping_method: order?.shipping_method || "Lettre Verte(max. 20g)",
     status: order?.status || "paid",
     is_trust_service: order?.is_trust_service || false,
+    created_at: order?.created_at ? new Date(order.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
     shipped_at: order?.shipped_at ? new Date(order.shipped_at).toISOString().split('T')[0] : "",
     delivered_at: order?.delivered_at ? new Date(order.delivered_at).toISOString().split('T')[0] : ""
   });
@@ -104,6 +105,7 @@ export function OrderModal({ order, isOpen, onClose, onRefresh }: OrderModalProp
 
       const submissionData = {
         ...formData,
+        created_at: formData.created_at ? new Date(formData.created_at).toISOString() : new Date().toISOString(),
         shipped_at: formData.shipped_at ? new Date(formData.shipped_at).toISOString() : null,
         delivered_at: formData.delivered_at ? new Date(formData.delivered_at).toISOString() : null,
       };
@@ -199,6 +201,10 @@ export function OrderModal({ order, isOpen, onClose, onRefresh }: OrderModalProp
               onCheckedChange={(checked) => setFormData({...formData, is_trust_service: !!checked})}
             />
             <Label htmlFor="trust" className="font-bold text-red-600">TIERS DE CONFIANCE (THRUST)</Label>
+          </div>
+          <div className="space-y-2">
+            <Label>Date commande</Label>
+            <Input type="date" value={formData.created_at} onChange={e => setFormData({...formData, created_at: e.target.value})} />
           </div>
           <div className="space-y-2">
             <Label>Date d'expédition</Label>

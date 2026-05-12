@@ -20,8 +20,8 @@ export async function getEnglishName(name: string, game: string, expansion?: str
 
   try {
     if (game === 'magic') {
-      // 1. Chercher par nom exact d'abord
-      const searchRes = await fetch(`https://api.scryfall.com/cards/search?q=!"${encodeURIComponent(cleanName)}"&unique=prints`);
+      // 1. Chercher par nom exact d'abord (support multilingue via Scryfall q=lang:any)
+      const searchRes = await fetch(`https://api.scryfall.com/cards/search?q=!"${encodeURIComponent(cleanName)}"+lang:any&unique=prints`);
       const searchData = await searchRes.json();
 
       if (searchData.data && searchData.data.length > 0) {
@@ -51,8 +51,8 @@ export async function getEnglishName(name: string, game: string, expansion?: str
         };
       }
 
-      // 2. Si pas de nom exact, chercher par terme large pour proposer des choix
-      const broadRes = await fetch(`https://api.scryfall.com/cards/search?q=${encodeURIComponent(cleanName)}`);
+      // 2. Si pas de nom exact, chercher par terme large pour proposer des choix (support multilingue)
+      const broadRes = await fetch(`https://api.scryfall.com/cards/search?q=${encodeURIComponent(cleanName)}+lang:any`);
       const broadData = await broadRes.json();
 
       if (broadData.data && broadData.data.length > 1) {

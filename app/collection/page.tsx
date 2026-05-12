@@ -184,6 +184,7 @@ export default function CollectionPage() {
   const [userSettings, setUserSettings] = useState<any>(null);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isUpdatePriceDialogOpen, setIsUpdatePriceDialogOpen] = useState(false);
+  const [isDeleteTrashDialogOpen, setIsDeleteTrashDialogOpen] = useState(false);
   const [newItem, setNewItem] = useState({
     card_name: '',
     card_name_en: '',
@@ -416,13 +417,17 @@ export default function CollectionPage() {
             updatedCount++;
           }
 
-          await supabase
+          const { error: updateError } = await supabase
             .from('inventory_items')
             .update({
               last_market_price: price,
               updated_at: new Date().toISOString()
             })
             .eq('id', item.id);
+
+          if (updateError) {
+            console.error(`Error updating price for ${item.id}:`, updateError);
+          }
         }
       } catch (err) {
         console.error(`Erreur maj prix pour ${item.card_name}:`, err);
@@ -531,6 +536,18 @@ export default function CollectionPage() {
     reader.onload = async (e) => {
       const text = e.target?.result as string;
       const lines = text.split('\n');
+      if (lines.length < 2) return;
+
+      const headers = lines[0].split(';').map(h => h.replace(/^"(.*)"$/, '$1').trim());
+      const productUrlIdx = headers.indexOf('ProductUrl');
+      const nameIdx = headers.indexOf('Nom Article') !== -1 ? headers.indexOf('Nom Article') : 2;
+      const expansionIdx = headers.indexOf('Expansion') !== -1 ? headers.indexOf('Expansion') : 6;
+      const conditionIdx = headers.indexOf('État') !== -1 ? headers.indexOf('État') : 9;
+      const priceIdx = headers.indexOf('Prix') !== -1 ? headers.indexOf('Prix') : 14;
+      const quantityIdx = headers.indexOf('Quantité') !== -1 ? headers.indexOf('Quantité') : 16;
+      const cmUrlIdx = headers.indexOf('Cardmarket URL') !== -1 ? headers.indexOf('Cardmarket URL') : headers.length - 2;
+      const externalIdIdx = 0;
+      const rarityIdx = 7;
 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -546,17 +563,17 @@ export default function CollectionPage() {
         const parts = lines[i].match(/(".*?"|[^;]+)(?=\s*;|\s*$)/g) || [];
         const cleanParts = parts.map(p => p.replace(/^"=""(.*?)"""$/, '$1').replace(/^"(.*)"$/, '$1'));
 
-        if (cleanParts.length < 17) continue;
+        if (cleanParts.length < Math.max(...headers.map((_, idx) => idx))) continue;
 
-        const name = cleanParts[2];
-        const expansion = cleanParts[6];
-        const condition = cleanParts[9];
-        const price = parseFloat(cleanParts[14].replace(',', '.')) || 0;
-        const quantity = parseInt(cleanParts[16]) || 0;
-        const cmUrl = cleanParts[cleanParts.length - 2];
-        const productUrl = cleanParts[cleanParts.length - 1]; // ProductUrl is usually last
-        const externalId = cleanParts[0];
-        const rarity = cleanParts[7];
+        const name = cleanParts[nameIdx];
+        const expansion = cleanParts[expansionIdx];
+        const condition = cleanParts[conditionIdx];
+        const price = parseFloat(cleanParts[priceIdx]?.replace(',', '.')) || 0;
+        const quantity = parseInt(cleanParts[quantityIdx]) || 0;
+        const cmUrl = cleanParts[cmUrlIdx];
+        const productUrl = productUrlIdx !== -1 ? cleanParts[productUrlIdx] : cleanParts[cleanParts.length - 1];
+        const externalId = cleanParts[externalIdIdx];
+        const rarity = cleanParts[rarityIdx];
 
         // Détection simple du jeu via l'URL CardMarket ou l'extension
         let game = 'magic';
@@ -835,12 +852,12 @@ export default function CollectionPage() {
              <Plus className="h-4 w-4 mr-2" /> Ajouter
           </Button>
           {filters.showArchived && (
-            <Button variant="destructive" onClick={handleEmptyTrash}>
+            <Button variant="destructive" onClick={() => setIsDeleteTrashDialogOpen(true)}>
               <Trash2 className="h-4 w-4 mr-2" /> Vider la corbeille
             </Button>
           )}
           <Button variant="outline" onClick={() => setFilters({...filters, showArchived: !filters.showArchived})}>
-             {filters.showArchived ? <ListIcon className="h-4 w-4 mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
+             {filters.showArchived ? <LayoutDashboard className="h-4 w-4 mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
              {filters.showArchived ? 'Voir Collection' : 'Voir Corbeille'}
           </Button>
           <Button variant="outline" onClick={() => setViewMode(viewMode === 'table' ? 'cards' : 'table')}>
@@ -1245,6 +1262,25 @@ export default function CollectionPage() {
         </Dialog>
       )}
 
+      {/* DIALOG VIDER CORBEILLE */}
+      <Dialog open={isDeleteTrashDialogOpen} onOpenChange={setIsDeleteTrashDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Vider la corbeille</DialogTitle>
+            <DialogDescription>
+              Êtes-vous sûr de vouloir supprimer définitivement toutes les cartes de la corbeille ? Cette action est irréversible.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDeleteTrashDialogOpen(false)}>Annuler</Button>
+            <Button variant="destructive" onClick={() => {
+              handleEmptyTrash();
+              setIsDeleteTrashDialogOpen(false);
+            }}>Confirmer la suppression</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* DIALOG ACTUALISATION PRIX */}
       <Dialog open={isUpdatePriceDialogOpen} onOpenChange={setIsUpdatePriceDialogOpen}>
         <DialogContent>
@@ -1349,8 +1385,8 @@ export default function CollectionPage() {
           <div className="grid gap-4 py-4">
             <div className="flex flex-col gap-2">
               <Label htmlFor="name">Nom de la carte</Label>
-              <div className="flex gap-2 w-full">
-                <Input id="name" className="flex-1" value={newItem.card_name} onChange={e => setNewItem({...newItem, card_name: e.target.value})} placeholder="Nom (FR ou EN)" />
+              <div className="flex gap-2 w-full items-center">
+                <Input id="name" className="grow" value={newItem.card_name} onChange={e => setNewItem({...newItem, card_name: e.target.value})} placeholder="Nom (FR ou EN)" />
                 <Button variant="outline" size="icon" className="shrink-0" onClick={handleSearchCard} disabled={isSearchingCard} title="Vérifier correspondance API">
                    <Search className={`h-4 w-4 ${isSearchingCard ? 'animate-spin' : ''}`} />
                 </Button>
