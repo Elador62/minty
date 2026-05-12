@@ -249,9 +249,21 @@ export default function CollectionPage() {
     let updatedCount = 0;
     let totalChecked = 0;
 
-    toast({ title: "Mise à jour lancée", description: `Analyse de ${items.length} cartes...` });
+    // Récupérer TOUTES les cartes non archivées pour la mise à jour
+    const { data: allItems, error: fetchError } = await supabase
+      .from('inventory_items')
+      .select('*')
+      .eq('is_archived', false);
 
-    for (const item of items) {
+    if (fetchError || !allItems) {
+      toast({ title: "Erreur", description: "Impossible de récupérer l'inventaire complet.", variant: "destructive" });
+      setIsRefreshing(false);
+      return;
+    }
+
+    toast({ title: "Mise à jour lancée", description: `Analyse de ${allItems.length} cartes...` });
+
+    for (const item of allItems) {
       try {
         let currentItem = item;
 
@@ -533,10 +545,12 @@ export default function CollectionPage() {
 
   const fetchOrderHistory = async (item: any) => {
     if (!item) return;
+
+    // On cherche les commandes correspondantes via le nom de la carte (localisé ou anglais)
     const { data, error } = await supabase
       .from('order_items')
-      .select('*, orders(external_order_id, buyer_name, status, created_at)')
-      .eq('card_name', item.card_name)
+      .select('*, orders!inner(external_order_id, buyer_name, status, created_at)')
+      .or(`card_name.eq."${item.card_name}",card_name.eq."${item.card_name_en}"`)
       .eq('expansion', item.expansion)
       .eq('condition', item.condition)
       .eq('language', item.language)
@@ -569,6 +583,44 @@ export default function CollectionPage() {
       is_foil: item.is_foil || false,
     } as any);
     setIsEditModalOpen(true);
+  };
+
+  const handleDeletePermanently = async (ids: string | string[]) => {
+    const idsToDelete = Array.isArray(ids) ? ids : [ids];
+
+    const { error } = await supabase
+      .from('inventory_items')
+      .delete()
+      .in('id', idsToDelete);
+
+    if (error) {
+      toast({ title: "Erreur", description: error.message, variant: "destructive" });
+    } else {
+      toast({
+        title: "Suppression définitive",
+        description: `${idsToDelete.length} carte(s) supprimée(s) définitivement.`
+      });
+      setSelectedIds([]);
+      fetchInventory();
+    }
+  };
+
+  const handleEmptyTrash = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { error } = await supabase
+      .from('inventory_items')
+      .delete()
+      .eq('user_id', user.id)
+      .eq('is_archived', true);
+
+    if (error) {
+      toast({ title: "Erreur", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Corbeille vidée", description: "Toutes les cartes archivées ont été supprimées." });
+      fetchInventory();
+    }
   };
 
   const handleUpdateItem = async () => {
@@ -669,6 +721,11 @@ export default function CollectionPage() {
           <Button variant="outline" onClick={() => setIsAddModalOpen(true)}>
              <Plus className="h-4 w-4 mr-2" /> Ajouter
           </Button>
+          {filters.showArchived && (
+            <Button variant="destructive" onClick={handleEmptyTrash}>
+              <Trash2 className="h-4 w-4 mr-2" /> Vider la corbeille
+            </Button>
+          )}
           <Button variant="outline" onClick={() => setFilters({...filters, showArchived: !filters.showArchived})}>
              {filters.showArchived ? <ListIcon className="h-4 w-4 mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
              {filters.showArchived ? 'Voir Collection' : 'Voir Corbeille'}
@@ -887,6 +944,14 @@ export default function CollectionPage() {
                                           <><Trash2 className="h-4 w-4 mr-2" /> Archiver</>
                                         )}
                                       </DropdownMenuItem>
+                                      {item.is_archived && (
+                                        <DropdownMenuItem
+                                          className="text-destructive font-bold"
+                                          onClick={() => handleDeletePermanently(item.id)}
+                                        >
+                                          <Trash2 className="h-4 w-4 mr-2" /> Supprimer définitivement
+                                        </DropdownMenuItem>
+                                      )}
                                     </DropdownMenuContent>
                                   </DropdownMenu>
                                </div>
@@ -964,6 +1029,14 @@ export default function CollectionPage() {
                                     <><Trash2 className="h-3 w-3 mr-2" /> Archiver</>
                                   )}
                                 </DropdownMenuItem>
+                                {item.is_archived && (
+                                  <DropdownMenuItem
+                                    className="text-destructive font-bold"
+                                    onClick={() => handleDeletePermanently(item.id)}
+                                  >
+                                    <Trash2 className="h-3 w-3 mr-2" /> Supprimer définitivement
+                                  </DropdownMenuItem>
+                                )}
                               </DropdownMenuContent>
                            </DropdownMenu>
                         </div>
@@ -1126,17 +1199,17 @@ export default function CollectionPage() {
 
       {/* MODAL AJOUT MANUEL */}
       <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[450px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Ajouter une carte</DialogTitle>
             <DialogDescription>Saisissez les détails de la carte à ajouter à votre collection.</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="name" className="text-right">Nom</Label>
-              <div className="col-span-3 flex gap-2">
-                <Input id="name" value={newItem.card_name} onChange={e => setNewItem({...newItem, card_name: e.target.value})} placeholder="Nom (FR ou EN)" />
-                <Button variant="outline" size="icon" onClick={handleSearchCard} disabled={isSearchingCard} title="Vérifier correspondance API">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="name">Nom de la carte</Label>
+              <div className="flex gap-2 w-full">
+                <Input id="name" className="flex-1" value={newItem.card_name} onChange={e => setNewItem({...newItem, card_name: e.target.value})} placeholder="Nom (FR ou EN)" />
+                <Button variant="outline" size="icon" className="shrink-0" onClick={handleSearchCard} disabled={isSearchingCard} title="Vérifier correspondance API">
                    <Search className={`h-4 w-4 ${isSearchingCard ? 'animate-spin' : ''}`} />
                 </Button>
               </div>
@@ -1179,7 +1252,7 @@ export default function CollectionPage() {
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="game" className="text-right">TCG</Label>
               <Select value={newItem.game} onValueChange={v => setNewItem({...newItem, game: v})}>
-                <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="col-span-3 h-9"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="magic">Magic</SelectItem>
                   <SelectItem value="pokemon">Pokémon</SelectItem>
@@ -1222,28 +1295,28 @@ export default function CollectionPage() {
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="price" className="text-right">Prix (€)</Label>
-              <Input id="price" type="number" step="0.01" value={newItem.listed_price} onChange={e => setNewItem({...newItem, listed_price: e.target.value})} className="col-span-3" />
+              <Input id="price" type="number" step="0.01" value={newItem.listed_price} onChange={e => setNewItem({...newItem, listed_price: e.target.value})} className="col-span-3 h-9" />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="quantity" className="text-right">Quantité</Label>
-              <Input id="quantity" type="number" value={newItem.quantity} onChange={e => setNewItem({...newItem, quantity: e.target.value})} className="col-span-3" />
+              <Input id="quantity" type="number" value={newItem.quantity} onChange={e => setNewItem({...newItem, quantity: e.target.value})} className="col-span-3 h-9" />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="storage" className="text-right">Stockage</Label>
-              <Input id="storage" placeholder="Ex: Boite A1" value={newItem.storage_location} onChange={e => setNewItem({...newItem, storage_location: e.target.value})} className="col-span-3" />
+              <Input id="storage" placeholder="Ex: Boite A1" value={newItem.storage_location} onChange={e => setNewItem({...newItem, storage_location: e.target.value})} className="col-span-3 h-9" />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="color" className="text-right">Couleur</Label>
-              <Input id="color" placeholder="Ex: Rouge, Psy" value={newItem.color} onChange={e => setNewItem({...newItem, color: e.target.value})} className="col-span-3" />
+              <Input id="color" placeholder="Ex: Rouge, Psy" value={newItem.color} onChange={e => setNewItem({...newItem, color: e.target.value})} className="col-span-3 h-9" />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="type" className="text-right">Type</Label>
-              <Input id="type" placeholder="Ex: Créature, Pokémon" value={newItem.card_type} onChange={e => setNewItem({...newItem, card_type: e.target.value})} className="col-span-3" />
+              <Input id="type" placeholder="Ex: Créature, Pokémon" value={newItem.card_type} onChange={e => setNewItem({...newItem, card_type: e.target.value})} className="col-span-3 h-9" />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="language" className="text-right">Langue</Label>
               <Select value={newItem.language} onValueChange={v => setNewItem({...newItem, language: v})}>
-                <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="col-span-3 h-9"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {SUPPORTED_LANGUAGES.map(lang => (
                     <SelectItem key={lang} value={lang}>{lang}</SelectItem>

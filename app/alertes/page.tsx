@@ -21,7 +21,6 @@ import {
   ExternalLink
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { getLanguageFlag } from "@/lib/utils/languages";
 
 type AlertType = 'price' | 'shipping' | 'reception';
 
@@ -41,6 +40,7 @@ export default function AlertesPage() {
   const [filterType, setFilterType] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [groupBy, setGroupBy] = useState<'none' | 'type'>('none');
 
   const supabase = createClient();
 
@@ -112,6 +112,18 @@ export default function AlertesPage() {
              </Select>
            </div>
            <div className="flex items-center gap-2">
+             <Filter className="h-4 w-4 text-muted-foreground" />
+             <Select value={groupBy} onValueChange={(v: any) => setGroupBy(v)}>
+               <SelectTrigger className="w-[130px]">
+                 <SelectValue placeholder="Grouper" />
+               </SelectTrigger>
+               <SelectContent>
+                 <SelectItem value="none">Ne pas grouper</SelectItem>
+                 <SelectItem value="type">Par Type</SelectItem>
+               </SelectContent>
+             </Select>
+           </div>
+           <div className="flex items-center gap-2">
              <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
              <Select value={sortBy} onValueChange={setSortBy}>
                <SelectTrigger className="w-[150px]">
@@ -134,7 +146,7 @@ export default function AlertesPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4">
+      <div className="space-y-8">
         {filteredAlerts.length === 0 ? (
           <Card className="bg-slate-50 border-dashed">
             <CardContent className="flex flex-col items-center justify-center py-12">
@@ -143,39 +155,61 @@ export default function AlertesPage() {
             </CardContent>
           </Card>
         ) : (
-          filteredAlerts.map((alert) => (
-            <Card key={alert.id} className={`overflow-hidden border-l-4 ${alert.severity === 'red' ? 'border-l-red-600' : alert.severity === 'orange' ? 'border-l-orange-500' : 'border-l-blue-400'}`}>
-              <CardContent className="p-0">
-                <div className="flex items-center p-4 gap-4">
-                  <div className={`p-3 rounded-full ${alert.type === 'price' ? 'bg-green-50' : alert.type === 'shipping' ? 'bg-orange-50' : 'bg-blue-50'}`}>
-                    {getAlertIcon(alert)}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h4 className="font-bold truncate">{alert.title}</h4>
-                      {getSeverityBadge(alert.severity)}
-                      <Badge variant="outline" className="text-[10px] capitalize">{alert.type}</Badge>
-                    </div>
-                    <p className="text-sm text-muted-foreground">{alert.description}</p>
-                    <p className="text-[10px] text-muted-foreground mt-2">
-                      {new Date(alert.date).toLocaleString()}
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    {alert.type === 'price' ? (
-                       <Button variant="outline" size="sm" asChild>
-                         <a href={`/collection?search=${encodeURIComponent(alert.title)}`}>Voir collection</a>
-                       </Button>
-                    ) : (
-                       <Button variant="outline" size="sm" asChild>
-                         <a href={`/suivi?search=${alert.metadata.order.external_order_id}`}>Voir commande</a>
-                       </Button>
-                    )}
-                  </div>
+          (() => {
+            const groups: Record<string, Alert[]> = {};
+            if (groupBy === 'none') {
+              groups['Toutes les alertes'] = filteredAlerts;
+            } else {
+              filteredAlerts.forEach(a => {
+                const key = a.type === 'price' ? 'Alertes de Prix' : a.type === 'shipping' ? 'Alertes d\'Envoi' : 'Alertes de Réception';
+                if (!groups[key]) groups[key] = [];
+                groups[key].push(a);
+              });
+            }
+
+            return Object.entries(groups).map(([groupName, groupAlerts]) => (
+              <div key={groupName} className="space-y-4">
+                <h3 className="text-lg font-bold border-b pb-2 flex items-center gap-2">
+                  {groupName} <Badge variant="secondary">{groupAlerts.length}</Badge>
+                </h3>
+                <div className="grid grid-cols-1 gap-4">
+                  {groupAlerts.map((alert) => (
+                    <Card key={alert.id} className={`overflow-hidden border-l-4 ${alert.severity === 'red' ? 'border-l-red-600' : alert.severity === 'orange' ? 'border-l-orange-500' : 'border-l-blue-400'}`}>
+                      <CardContent className="p-0">
+                        <div className="flex items-center p-4 gap-4">
+                          <div className={`p-3 rounded-full ${alert.type === 'price' ? 'bg-green-50' : alert.type === 'shipping' ? 'bg-orange-50' : 'bg-blue-50'}`}>
+                            {getAlertIcon(alert)}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h4 className="font-bold truncate">{alert.title}</h4>
+                              {getSeverityBadge(alert.severity)}
+                              <Badge variant="outline" className="text-[10px] capitalize">{alert.type}</Badge>
+                            </div>
+                            <p className="text-sm text-muted-foreground">{alert.description}</p>
+                            <p className="text-[10px] text-muted-foreground mt-2">
+                              {new Date(alert.date).toLocaleString()}
+                            </p>
+                          </div>
+                          <div className="flex gap-2">
+                            {alert.type === 'price' ? (
+                               <Button variant="outline" size="sm" asChild>
+                                 <a href={`/collection?search=${encodeURIComponent(alert.title)}`}>Voir collection</a>
+                               </Button>
+                            ) : (
+                               <Button variant="outline" size="sm" asChild>
+                                 <a href={`/suivi?search=${alert.metadata.order.external_order_id}`}>Voir commande</a>
+                               </Button>
+                            )}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
                 </div>
-              </CardContent>
-            </Card>
-          ))
+              </div>
+            ));
+          })()
         )}
       </div>
     </div>
