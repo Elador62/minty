@@ -30,7 +30,8 @@ export function OrderModal({ order, isOpen, onClose, onRefresh }: OrderModalProp
     total_price: order?.total_price || 0,
     shipping_cost: order?.shipping_cost || 0,
     shipping_method: order?.shipping_method || "",
-    status: order?.status || "paid"
+    status: order?.status || "paid",
+    shipped_at: order?.shipped_at || ""
   });
   const [items, setItems] = useState<any[]>(order?.order_items || []);
   const [isSaving, setIsSaving] = useState(false);
@@ -114,6 +115,24 @@ export function OrderModal({ order, isOpen, onClose, onRefresh }: OrderModalProp
           <div className="space-y-2">
             <Label>Frais de port (€)</Label>
             <Input type="number" value={formData.shipping_cost} onChange={e => setFormData({...formData, shipping_cost: parseFloat(e.target.value)})} />
+          </div>
+          <div className="space-y-2">
+            <Label>Date d'expédition</Label>
+            <Input
+              type="datetime-local"
+              value={formData.shipped_at ? new Date(formData.shipped_at).toISOString().slice(0, 16) : ""}
+              onChange={e => {
+                const newVal = e.target.value;
+                const oldVal = formData.shipped_at;
+
+                if (oldVal && newVal) {
+                  const confirmMsg = `Modifier la date d'expédition ?\nAncienne : ${new Date(oldVal).toLocaleString()}\nNouvelle : ${new Date(newVal).toLocaleString()}`;
+                  if (!window.confirm(confirmMsg)) return;
+                }
+
+                setFormData({...formData, shipped_at: newVal ? new Date(newVal).toISOString() : null});
+              }}
+            />
           </div>
         </div>
 

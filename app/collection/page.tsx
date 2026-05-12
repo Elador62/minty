@@ -56,6 +56,8 @@ export default function CollectionPage() {
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [newItem, setNewItem] = useState({
     card_name: '',
+    card_name_en: '',
+    set_code: '',
     expansion: '',
     game: 'magic',
     listed_price: '',
@@ -87,22 +89,58 @@ export default function CollectionPage() {
 
   const handleUpdatePrices = async () => {
     setIsRefreshing(true);
-    // Simulation d'une mise à jour de prix
-    setTimeout(() => {
-      setIsRefreshing(false);
-      toast({ title: "Prix mis à jour", description: "Les données du marché ont été actualisées." });
-    }, 1500);
+    const { getScryfallPrice } = await import('@/lib/cardmarket/images');
+
+    let updatedCount = 0;
+    const historyToInsert = [];
+
+    for (const item of items) {
+      if (item.game === 'magic' && item.card_name_en && item.set_code) {
+        const newPrice = await getScryfallPrice(item.card_name_en, item.set_code);
+        if (newPrice) {
+          const priceNum = parseFloat(newPrice);
+
+          // Mise à jour de l'item
+          await supabase
+            .from('inventory_items')
+            .update({ last_market_price: priceNum })
+            .eq('id', item.id);
+
+          // Ajout à l'historique
+          historyToInsert.push({
+            inventory_item_id: item.id,
+            price: priceNum
+          });
+
+          updatedCount++;
+        }
+      }
+    }
+
+    if (historyToInsert.length > 0) {
+      await supabase.from('price_history').insert(historyToInsert);
+    }
+
+    setIsRefreshing(false);
+    toast({
+      title: "Prix mis à jour",
+      description: `${updatedCount} prix ont été actualisés via Scryfall.`
+    });
+    fetchInventory();
   };
 
   const handleAddItem = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const imageUrl = await getCardThumbnail(newItem.card_name, newItem.game);
+    // Tentative de récupération des métadonnées
+    const metadata = await (await import('@/lib/cardmarket/images')).fetchCardMetadata(newItem.card_name, newItem.game, newItem.expansion);
 
     const { error } = await supabase.from('inventory_items').insert([{
       user_id: user.id,
       card_name: newItem.card_name,
+      card_name_en: newItem.card_name_en || metadata?.card_name_en || newItem.card_name,
+      set_code: newItem.set_code || metadata?.set_code || '',
       expansion: newItem.expansion,
       game: newItem.game,
       listed_price: parseFloat(newItem.listed_price) || 0,
@@ -112,7 +150,7 @@ export default function CollectionPage() {
       language: newItem.language,
       color: newItem.color,
       card_type: newItem.card_type,
-      image_url: imageUrl,
+      image_url: metadata?.image_url || null,
       last_market_price: parseFloat(newItem.listed_price) || 0 // Initialiser avec le prix listé
     }]);
 
@@ -123,6 +161,8 @@ export default function CollectionPage() {
       setIsAddModalOpen(false);
       setNewItem({
         card_name: '',
+        card_name_en: '',
+        set_code: '',
         expansion: '',
         game: 'magic',
         listed_price: '',
@@ -177,17 +217,19 @@ export default function CollectionPage() {
           game = 'pokemon';
         }
 
-        // Récupération de l'illustration
-        let imageUrl = null;
+        // Récupération des métadonnées (nom anglais et set code)
+        let metadata = null;
         try {
-          imageUrl = await getCardThumbnail(name, game);
+          metadata = await (await import('@/lib/cardmarket/images')).fetchCardMetadata(name, game, expansion);
         } catch (err) {
-          console.error("Erreur fetch image import:", err);
+          console.error("Erreur fetch metadata import:", err);
         }
 
         itemsToInsert.push({
           user_id: user.id,
           card_name: name,
+          card_name_en: metadata?.card_name_en || name,
+          set_code: metadata?.set_code || '',
           expansion: expansion,
           game: game,
           listed_price: price,
@@ -197,7 +239,7 @@ export default function CollectionPage() {
           cardmarket_url: cmUrl,
           external_id: externalId,
           rarity: rarity,
-          image_url: imageUrl,
+          image_url: metadata?.image_url || null,
           created_at: new Date().toISOString()
         });
       }
@@ -511,6 +553,14 @@ export default function CollectionPage() {
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="expansion" className="text-right">Édition</Label>
               <Input id="expansion" value={newItem.expansion} onChange={e => setNewItem({...newItem, expansion: e.target.value})} className="col-span-3" />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="name_en" className="text-right">Nom (EN)</Label>
+              <Input id="name_en" value={newItem.card_name_en} onChange={e => setNewItem({...newItem, card_name_en: e.target.value})} className="col-span-3" />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="set_code" className="text-right">Set Code</Label>
+              <Input id="set_code" placeholder="ex: M10" value={newItem.set_code} onChange={e => setNewItem({...newItem, set_code: e.target.value})} className="col-span-3" />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="price" className="text-right">Prix (€)</Label>
