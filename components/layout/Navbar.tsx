@@ -4,11 +4,12 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { LogOut, User, LogIn } from "lucide-react";
+import { LogOut, User, LogIn, Bell } from "lucide-react";
 import Link from "next/link";
 
 export function Navbar() {
   const [user, setUser] = useState<any>(null);
+  const [alertCount, setAlertCount] = useState(0);
   const supabase = createClient();
   const router = useRouter();
 
@@ -18,6 +19,26 @@ export function Navbar() {
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       setUser(user);
+      if (user) {
+        // Simple alert count (needs logic from alerts page or a shared hook)
+        // For simplicity, we query orders with delays and inventory with diffs
+        const { data: settings } = await supabase.from('user_settings').select('*').single();
+        const threshold = settings?.price_alert_threshold || 10;
+        const shipOrange = settings?.shipping_delay_orange || 4;
+        const recOrange = settings?.reception_delay_orange || 5;
+
+        const { data: inventory } = await supabase.from('inventory_items').select('listed_price, last_market_price');
+        const priceAlerts = inventory?.filter((i: any) => {
+           const diff = i.listed_price > 0 ? ((Number(i.last_market_price) - Number(i.listed_price)) / Number(i.listed_price)) * 100 : 0;
+           return Math.abs(diff) >= threshold;
+        }).length || 0;
+
+        const { data: orders } = await supabase.from('orders').select('status, created_at, shipped_at');
+        const shipAlerts = orders?.filter((o: any) => ['paid', 'ready', 'preparing'].includes(o.status) && (new Date().getTime() - new Date(o.created_at).getTime()) / (1000 * 3600 * 24) > shipOrange).length || 0;
+        const recAlerts = orders?.filter((o: any) => o.status === 'shipped' && o.shipped_at && (new Date().getTime() - new Date(o.shipped_at).getTime()) / (1000 * 3600 * 24) > recOrange).length || 0;
+
+        setAlertCount(priceAlerts + shipAlerts + recAlerts);
+      }
     };
     getUser();
 
@@ -69,6 +90,14 @@ export function Navbar() {
         <div className="flex items-center gap-4">
           {user ? (
             <>
+              <Link href="/alertes" className="relative p-2 text-muted-foreground hover:text-primary transition-colors">
+                <Bell className="h-5 w-5" />
+                {alertCount > 0 && (
+                  <span className="absolute top-0 right-0 h-4 w-4 bg-red-600 text-white text-[10px] flex items-center justify-center rounded-full">
+                    {alertCount}
+                  </span>
+                )}
+              </Link>
               <div className="flex items-center gap-2 text-sm text-muted-foreground mr-2">
                 <User className="h-4 w-4" />
                 <span className="hidden md:inline">{user.email}</span>

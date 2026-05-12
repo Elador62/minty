@@ -61,6 +61,7 @@ interface Order {
   status: OrderStatus;
   is_trust_service: boolean;
   created_at: string;
+  shipped_at?: string;
   order_items?: any[];
 }
 
@@ -103,7 +104,7 @@ export default function SuiviPage() {
   const fetchOrders = async () => {
     const { data } = await supabase
       .from('orders')
-      .select('id, external_order_id, buyer_name, total_price, shipping_cost, status, is_trust_service, created_at, order_items(*)')
+      .select('id, external_order_id, buyer_name, total_price, shipping_cost, status, is_trust_service, created_at, shipped_at, order_items(*)')
       .order('created_at', { ascending: false });
 
     setOrders(data || []);
@@ -155,9 +156,14 @@ export default function SuiviPage() {
       }
     }
 
+    const updates: any = { status: nextStatus };
+    if (nextStatus === 'shipped') {
+      updates.shipped_at = new Date().toISOString();
+    }
+
     const { error } = await supabase
       .from('orders')
-      .update({ status: nextStatus })
+      .update(updates)
       .eq('id', orderId);
 
     if (error) {
@@ -280,8 +286,19 @@ export default function SuiviPage() {
                 <div className="flex flex-col gap-3 whitespace-normal">
                   {colOrders.map((order) => {
                     const daysSinceCreation = (new Date().getTime() - new Date(order.created_at).getTime()) / (1000 * 3600 * 24);
-                    const isOld = ['paid', 'ready', 'preparing'].includes(order.status) && daysSinceCreation > 4;
-                    const isUrgent = ['paid', 'ready', 'preparing'].includes(order.status) && daysSinceCreation > 6;
+
+                    // Retard Envoi
+                    const shipOrange = settings?.shipping_delay_orange || 4;
+                    const shipRed = settings?.shipping_delay_red || 7;
+                    const isOld = ['paid', 'ready', 'preparing'].includes(order.status) && daysSinceCreation > shipOrange;
+                    const isUrgent = ['paid', 'ready', 'preparing'].includes(order.status) && daysSinceCreation > shipRed;
+
+                    // Retard Réception
+                    const recOrange = settings?.reception_delay_orange || 5;
+                    const recRed = settings?.reception_delay_red || 7;
+                    const daysSinceShipping = order.shipped_at ? (new Date().getTime() - new Date(order.shipped_at).getTime()) / (1000 * 3600 * 24) : 0;
+                    const isLateReceptionOrange = order.status === 'shipped' && daysSinceShipping > recOrange;
+                    const isLateReceptionRed = order.status === 'shipped' && daysSinceShipping > recRed;
 
                     const stockAlerts = order.order_items?.filter(item => {
                       const inv = inventory.find(i => i.card_name === item.card_name && i.expansion === item.expansion);
@@ -295,8 +312,10 @@ export default function SuiviPage() {
                           <div className="flex justify-between items-start gap-2">
                             <div className="flex flex-col gap-1">
                               <span className="text-xs font-mono text-muted-foreground">{order.external_order_id}</span>
-                              {isUrgent && <Badge className="bg-red-600 text-white text-[8px] h-4 py-0">URGENT</Badge>}
-                              {!isUrgent && isOld && <Badge className="bg-orange-500 text-white text-[8px] h-4 py-0">PRIORITÉ</Badge>}
+                              {isUrgent && <Badge className="bg-red-600 text-white text-[8px] h-4 py-0">RETARD ENVOI</Badge>}
+                              {!isUrgent && isOld && <Badge className="bg-orange-500 text-white text-[8px] h-4 py-0">ENVOI PRIORITÉ</Badge>}
+                              {isLateReceptionRed && <Badge className="bg-red-600 text-white text-[8px] h-4 py-0">RECEPTION CRITIQUE</Badge>}
+                              {!isLateReceptionRed && isLateReceptionOrange && <Badge className="bg-orange-500 text-white text-[8px] h-4 py-0">RECEPTION ATTENDUE</Badge>}
                               {hasStockIssue && (
                                 <Badge variant="destructive" className="text-[8px] h-4 py-0 flex items-center gap-1">
                                   <AlertTriangle className="h-2 w-2" /> STOCK
