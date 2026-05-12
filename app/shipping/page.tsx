@@ -80,10 +80,10 @@ export default function ShippingPage() {
   if (isLoading) return <div className="container mx-auto py-10 text-center">Chargement...</div>;
 
   return (
-    <div className="container mx-auto py-10 space-y-8 print:block print:p-0 print:m-0 print:space-y-0 print:static">
-      <div className="flex justify-between items-center print:hidden">
-        <h1 className="text-3xl font-bold tracking-tight">Expédition (Picking List)</h1>
-        <Button onClick={handlePrint}>
+    <div className="container mx-auto px-4 py-6 md:py-10 space-y-6 md:space-y-8 print:block print:p-0 print:m-0 print:space-y-0 print:static">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 print:hidden">
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Expédition (Picking List)</h1>
+        <Button onClick={handlePrint} className="w-full sm:w-auto">
           <Printer className="mr-2 h-4 w-4" /> Imprimer le rapport
         </Button>
       </div>
@@ -98,23 +98,23 @@ export default function ShippingPage() {
 
           return (
             <div key={order.id} className="print:break-after-page print:block print:w-full">
-              <Card className={`overflow-hidden print:shadow-none print:border-none print:rounded-none h-full flex flex-col transition-colors ${allPicked ? 'border-green-500 bg-green-50/30' : ''} ${order.is_trust_service ? 'border-4 border-red-600' : ''}`}>
+              <Card className={`overflow-hidden print:shadow-none print:border-none print:rounded-none h-full flex flex-col transition-colors ${allPicked ? 'border-green-500 bg-green-50/30' : ''} ${order.is_trust_service ? 'border-2 md:border-4 border-red-600' : ''}`}>
 
                 {/* ENTETE : Devient Vert si tout est pické */}
-                <CardHeader className={`flex flex-row items-center justify-between py-4 print:bg-white print:border-b-2 print:border-black transition-colors ${allPicked ? 'bg-green-500 text-white print:text-black' : 'bg-slate-50'}`}>
-                  <div className="flex items-center gap-4">
+                <CardHeader className={`flex flex-col sm:flex-row items-start sm:items-center justify-between py-4 gap-4 print:bg-white print:border-b-2 print:border-black transition-colors ${allPicked ? 'bg-green-500 text-white print:text-black' : 'bg-slate-50'}`}>
+                  <div className="flex items-center gap-2 md:gap-4 w-full sm:w-auto">
                     <Button
                       variant="ghost"
                       size="icon"
-                      className={`print:hidden ${allPicked ? 'text-white hover:text-white hover:bg-green-600' : ''}`}
+                      className={`print:hidden shrink-0 ${allPicked ? 'text-white hover:text-white hover:bg-green-600' : ''}`}
                       onClick={() => toggleCollapse(order.id)}
                     >
                       {collapsedOrders[order.id] ? <ChevronRight className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
                     </Button>
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <CardTitle className="text-xl">Commande {order.external_order_id}</CardTitle>
-                        <Button variant="ghost" size="icon" className="h-6 w-6 p-0 print:hidden" asChild title="Voir sur CardMarket">
+                    <div className="space-y-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <CardTitle className="text-lg md:text-xl truncate">Commande {order.external_order_id}</CardTitle>
+                        <Button variant="ghost" size="icon" className="h-6 w-6 p-0 print:hidden shrink-0" asChild title="Voir sur CardMarket">
                           <a
                             href={`https://www.cardmarket.com/fr/${order.order_items?.[0]?.game === 'pokemon' ? 'Pokemon' : 'Magic'}/Orders/${order.external_order_id}`}
                             target="_blank"
@@ -124,48 +124,49 @@ export default function ShippingPage() {
                           </a>
                         </Button>
                         {order.is_trust_service && (
-                          <div className="border-2 border-red-600 px-2 py-0.5 rounded animate-pulse uppercase font-black text-xs print:border-black print:text-black print:bg-white">
+                          <div className="border-2 border-red-600 px-2 py-0.5 rounded animate-pulse uppercase font-black text-[10px] print:border-black print:text-black print:bg-white shrink-0">
                             TRUST SERVICE
                           </div>
                         )}
-                        {allPicked && <Badge className="bg-white text-green-600 border-green-600 font-bold">PRÊT</Badge>}
+                        {allPicked && <Badge className="bg-white text-green-600 border-green-600 font-bold text-[10px]">PRÊT</Badge>}
                       </div>
-                      <CardDescription className={`font-bold text-lg ${allPicked ? 'text-green-50' : 'text-slate-900'}`}>{order.buyer_name}</CardDescription>
+                      <CardDescription className={`font-bold text-base md:text-lg truncate ${allPicked ? 'text-green-50' : 'text-slate-900'}`}>{order.buyer_name}</CardDescription>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className={`text-xs uppercase ${allPicked ? 'text-green-100' : 'text-muted-foreground'}`}>Mode d'envoi</p>
-                    <p className="font-black text-lg uppercase">{order.shipping_method || 'Standard'}</p>
-                    <p className="text-xs font-mono">{new Date(order.created_at).toLocaleDateString()}</p>
+                  <div className="text-left sm:text-right w-full sm:w-auto border-t sm:border-t-0 pt-2 sm:pt-0">
+                    <p className={`text-[10px] uppercase ${allPicked ? 'text-green-100' : 'text-muted-foreground'}`}>Mode d'envoi</p>
+                    <p className="font-black text-base md:text-lg uppercase truncate">{order.shipping_method || 'Standard'}</p>
+                    <p className="text-[10px] font-mono">{new Date(order.created_at).toLocaleDateString()}</p>
                   </div>
                 </CardHeader>
 
                 {!collapsedOrders[order.id] && (
-                  <CardContent className="flex-1 py-8 grid grid-cols-1 md:grid-cols-2 gap-12 print:grid-cols-1 print:py-2">
+                  <CardContent className="flex-1 py-6 md:py-8 grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 print:grid-cols-1 print:py-2">
                     {/* ADRESSE */}
                     <div className="space-y-4 print:space-y-1">
-                      <h4 className="font-bold text-sm uppercase text-muted-foreground border-b pb-1 print:text-black print:border-black print:text-[10px]">Adresse de livraison</h4>
-                      <pre className="whitespace-pre-wrap font-sans text-lg bg-slate-50 p-6 rounded border print:bg-white print:border-black print:p-2 print:text-sm">
+                      <h4 className="font-bold text-xs md:text-sm uppercase text-muted-foreground border-b pb-1 print:text-black print:border-black print:text-[10px]">Adresse de livraison</h4>
+                      <pre className="whitespace-pre-wrap font-sans text-sm md:text-lg bg-slate-50 p-4 md:p-6 rounded border print:bg-white print:border-black print:p-2 print:text-sm">
                         {order.buyer_address}
                       </pre>
                     </div>
 
                     {/* ITEMS */}
                     <div className="space-y-4 print:mt-auto print:space-y-1">
-                      <h4 className="font-bold text-sm uppercase text-muted-foreground border-b pb-1 print:text-black print:border-black print:text-[10px]">Articles à préparer</h4>
+                      <h4 className="font-bold text-xs md:text-sm uppercase text-muted-foreground border-b pb-1 print:text-black print:border-black print:text-[10px]">Articles à préparer</h4>
                       <div className="space-y-4 print:space-y-1">
                         {order.order_items?.map((item: any, idx: number) => (
-                        <div key={item.id} className={`flex gap-4 items-center border-b border-dashed pb-3 last:border-0 print:pb-1 ${item.is_picked ? 'opacity-40 grayscale print:opacity-100 print:grayscale-0' : ''}`}>
-                            <div>
+                        <div key={item.id} className={`flex gap-3 md:gap-4 items-center border-b border-dashed pb-3 last:border-0 print:pb-1 ${item.is_picked ? 'opacity-40 grayscale print:opacity-100 print:grayscale-0' : ''}`}>
+                            <div className="shrink-0">
                               <Checkbox
                                 id={item.id}
+                                className="h-5 w-5 md:h-6 md:w-6"
                                 checked={item.is_picked}
                                 onCheckedChange={() => togglePicked(order.id, item.id, item.is_picked)}
                               />
                             </div>
 
                             <div
-                              className="w-14 h-20 bg-slate-100 rounded border flex items-center justify-center text-[10px] text-muted-foreground shrink-0 overflow-hidden cursor-zoom-in group relative print:hidden"
+                              className="w-10 h-14 md:w-14 md:h-20 bg-slate-100 rounded border flex items-center justify-center text-[8px] md:text-[10px] text-muted-foreground shrink-0 overflow-hidden cursor-zoom-in group relative print:hidden"
                               onClick={() => item.image_url && setZoomedImage({ url: item.image_url, name: item.card_name })}
                             >
                               {item.image_url ? (
@@ -180,26 +181,26 @@ export default function ShippingPage() {
                               )}
                             </div>
 
-                            <div className="flex-1">
-                              <div className="flex justify-between items-start">
-                                <div className="flex flex-col">
-                                  <p className="font-black text-xl leading-tight print:text-sm flex items-center gap-2">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex justify-between items-start gap-2">
+                                <div className="flex flex-col min-w-0">
+                                  <p className="font-black text-base md:text-xl leading-tight print:text-sm flex flex-wrap items-center gap-1 md:gap-2">
                                     <span className="text-slate-400">1x</span>
-                                    {item.card_name}
-                                    <span className="text-sm font-normal opacity-70">{getLanguageFlag(item.language)}</span>
+                                    <span className="truncate">{item.card_name}</span>
+                                    <span className="text-base md:text-sm font-normal opacity-70 shrink-0">{getLanguageFlag(item.language)}</span>
                                   </p>
                                   {(() => {
                                     const inv = inventory.find(i => i.card_name === item.card_name && i.expansion === item.expansion);
                                     if (!inv || inv.quantity < item.quantity) {
                                       return (
-                                        <Badge variant="destructive" className="w-fit mt-1 text-[10px] h-5 py-0">
+                                        <Badge variant="destructive" className="w-fit mt-1 text-[9px] md:text-[10px] h-5 py-0">
                                           <AlertCircle className="h-3 w-3 mr-1" /> STOCK INSUFFISANT ({inv?.quantity || 0} dispo)
                                         </Badge>
                                       );
                                     }
                                     if (inv.storage_location) {
                                       return (
-                                        <div className="flex items-center gap-1 text-[11px] text-blue-600 font-bold mt-1">
+                                        <div className="flex items-center gap-1 text-[10px] md:text-[11px] text-blue-600 font-bold mt-1">
                                           <Box className="h-3 w-3" /> {inv.storage_location}
                                         </div>
                                       );
@@ -207,9 +208,9 @@ export default function ShippingPage() {
                                     return null;
                                   })()}
                                 </div>
-                                {item.is_picked && <CheckCircle2 className="h-5 w-5 text-green-600 print:hidden" />}
+                                {item.is_picked && <CheckCircle2 className="h-5 w-5 text-green-600 print:hidden shrink-0" />}
                               </div>
-                              <p className="text-sm font-medium mt-1 print:text-[10px]">
+                              <p className="text-[10px] md:text-sm font-medium mt-1 print:text-[10px] truncate">
                                 {item.expansion} • <span className="uppercase">{item.condition}</span> • {item.language}
                               </p>
                             </div>
@@ -219,7 +220,7 @@ export default function ShippingPage() {
                     </div>
 
                     {order.is_trust_service && (
-                       <div className="col-span-full bg-red-600 text-white text-center py-3 text-sm font-black uppercase print:bg-white print:text-black print:border-2 print:border-black print:m-4 print:py-1">
+                       <div className="col-span-full bg-red-600 text-white text-center py-2 md:py-3 text-xs md:text-sm font-black uppercase print:bg-white print:text-black print:border-2 print:border-black print:m-4 print:py-1">
                         ⚠️ TIERS DE CONFIANCE - SUIVI OBLIGATOIRE ⚠️
                        </div>
                     )}
@@ -232,7 +233,7 @@ export default function ShippingPage() {
       </div>
 
       <Dialog open={!!zoomedImage} onOpenChange={() => setZoomedImage(null)}>
-        <DialogContent className="max-w-md p-0 overflow-hidden border-none bg-transparent shadow-none">
+        <DialogContent className="max-w-[90vw] sm:max-w-md p-0 overflow-hidden border-none bg-transparent shadow-none">
           {zoomedImage && (
             <div className="flex flex-col items-center">
               <img
@@ -241,7 +242,7 @@ export default function ShippingPage() {
                 className="w-full h-auto rounded-lg shadow-2xl"
                 referrerPolicy="no-referrer"
               />
-              <p className="mt-4 text-white font-bold bg-black/50 px-4 py-2 rounded-full">{zoomedImage.name}</p>
+              <p className="mt-4 text-white font-bold bg-black/50 px-4 py-2 rounded-full text-sm">{zoomedImage.name}</p>
             </div>
           )}
         </DialogContent>

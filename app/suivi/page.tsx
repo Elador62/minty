@@ -134,8 +134,6 @@ export default function SuiviPage() {
       const params = new URLSearchParams(window.location.search);
       const orderId = params.get('orderId');
       if (orderId) {
-        // We wait a bit for the orders to be loaded in the state
-        // or we can fetch it directly to be sure
         supabase.from('orders')
           .select('id, external_order_id, buyer_name, total_price, shipping_cost, status, is_trust_service, created_at, shipped_at, delivered_at, order_items(*)')
           .eq('id', orderId)
@@ -291,13 +289,13 @@ export default function SuiviPage() {
     <ScrollArea className="w-full whitespace-nowrap rounded-md border bg-slate-50/50 overflow-x-auto">
       <ScrollBar orientation="horizontal" className="h-2" />
       <div className="pt-4">
-        <div className="flex w-max space-x-6 p-6 min-h-[700px]">
+        <div className="flex w-max space-x-4 md:space-x-6 p-4 md:p-6 min-h-[600px] md:min-h-[700px]">
           {COLUMNS.map((col) => {
             const colOrders = getFilteredAndSortedOrders(orders.filter(o => o.status === col.id));
             const customColor = settings?.kanban_colors?.[col.id];
 
             return (
-              <div key={col.id} className="flex flex-col gap-4 w-[320px] shrink-0">
+              <div key={col.id} className="flex flex-col gap-4 w-[280px] md:w-[320px] shrink-0">
                 <div
                   className="flex items-center justify-between px-3 py-2 rounded-t-lg font-semibold border-b-2"
                   style={{
@@ -307,9 +305,9 @@ export default function SuiviPage() {
                 >
                   <div className="flex items-center gap-2">
                     <col.icon className="h-4 w-4" />
-                    <span>{col.label}</span>
+                    <span className="text-sm md:text-base">{col.label}</span>
                   </div>
-                  <Badge variant="secondary" className="bg-white/80">
+                  <Badge variant="secondary" className="bg-white/80 text-[10px] md:text-xs">
                     {colOrders.length}
                   </Badge>
                 </div>
@@ -330,10 +328,10 @@ export default function SuiviPage() {
 
                     return (
                       <Card key={order.id} className={`shadow-sm border-none transition-all ${order.is_trust_service ? 'ring-2 ring-red-500 ring-offset-2' : ''} ${isUrgent ? 'border-2 border-red-500 bg-red-50' : isOld ? 'border-2 border-orange-500 bg-orange-50' : ''} ${hasStockIssue ? 'border-l-4 border-l-red-600' : ''}`}>
-                        <CardHeader className="p-4 pb-2">
+                        <CardHeader className="p-3 md:p-4 pb-2">
                           <div className="flex justify-between items-start gap-2">
                             <div className="flex flex-col gap-1">
-                              <span className="text-xs font-mono text-muted-foreground">{order.external_order_id}</span>
+                              <span className="text-[10px] font-mono text-muted-foreground truncate max-w-[120px]">{order.external_order_id}</span>
                               {isUrgent && <Badge className="bg-red-600 text-white text-[8px] h-4 py-0">URGENT</Badge>}
                               {!isUrgent && isOld && <Badge className="bg-orange-500 text-white text-[8px] h-4 py-0">PRIORITÉ</Badge>}
                               {hasStockIssue && (
@@ -342,8 +340,8 @@ export default function SuiviPage() {
                                 </Badge>
                               )}
                             </div>
-                            <div className="flex items-center gap-1">
-                              <span className="text-sm font-bold">{Number(order.total_price).toFixed(2)}€</span>
+                            <div className="flex items-center gap-1 shrink-0">
+                              <span className="text-xs md:text-sm font-bold">{Number(order.total_price).toFixed(2)}€</span>
                               <Button variant="ghost" size="icon" className="h-6 w-6 p-0" asChild title="Voir sur CardMarket">
                                 <a
                                   href={`https://www.cardmarket.com/fr/${order.order_items?.[0]?.game === 'pokemon' ? 'Pokemon' : 'Magic'}/Orders/${order.external_order_id}`}
@@ -383,10 +381,10 @@ export default function SuiviPage() {
                               </DropdownMenu>
                             </div>
                           </div>
-                          <CardTitle className="text-sm leading-tight">{order.buyer_name}</CardTitle>
+                          <CardTitle className="text-xs md:text-sm leading-tight truncate">{order.buyer_name}</CardTitle>
                         </CardHeader>
 
-                        <CardContent className="p-4 pt-0 space-y-3">
+                        <CardContent className="p-3 md:p-4 pt-0 space-y-3">
                           <div className="flex justify-between items-center">
                             <Button
                               variant="ghost"
@@ -395,9 +393,9 @@ export default function SuiviPage() {
                               onClick={() => toggleExpand(order.id)}
                             >
                               {expandedOrders[order.id] ? (
-                                <><ChevronUp className="h-3 w-3 mr-1" /> Masquer items</>
+                                <><ChevronUp className="h-3 w-3 mr-1" /> Masquer</>
                               ) : (
-                                <><ChevronDown className="h-3 w-3 mr-1" /> Voir items ({order.order_items?.length})</>
+                                <><ChevronDown className="h-3 w-3 mr-1" /> Items ({order.order_items?.length})</>
                               )}
                             </Button>
 
@@ -405,16 +403,16 @@ export default function SuiviPage() {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                className="h-7 text-[10px] hover:bg-slate-100"
+                                className="h-7 text-[10px] hover:bg-slate-100 shrink-0"
                                 onClick={() => moveOrderNext(order.id, order.status)}
                               >
-                                Suivant <ArrowRight className="ml-1 h-3 w-3" />
+                                <span className="hidden sm:inline">Suivant</span> <ArrowRight className="sm:ml-1 h-3 w-3" />
                               </Button>
                             )}
                           </div>
 
                           {expandedOrders[order.id] && (
-                            <div className="pt-2 border-t text-[11px] space-y-1">
+                            <div className="pt-2 border-t text-[10px] md:text-[11px] space-y-1">
                               {order.order_items?.map((item, idx) => {
                                 const inv = inventory.find(i => i.card_name === item.card_name && i.expansion === item.expansion);
                                 const isMissing = !inv || inv.quantity < item.quantity;
@@ -431,9 +429,9 @@ export default function SuiviPage() {
                                   >
                                     <span className="truncate flex items-center gap-1">
                                       {item.quantity}x {item.card_name}
-                                      <span className="text-[8px] opacity-70">{getLanguageFlag(item.language)}</span>
+                                      <span className="text-[8px] opacity-70 shrink-0">{getLanguageFlag(item.language)}</span>
                                     </span>
-                                    <span className="text-[9px] shrink-0">{isMissing ? 'HORS STOCK' : item.condition}</span>
+                                    <span className="text-[8px] md:text-[9px] shrink-0">{isMissing ? 'HORS STOCK' : item.condition}</span>
                                   </div>
                                 );
                               })}
@@ -471,55 +469,59 @@ export default function SuiviPage() {
     });
 
     return (
-      <div className="space-y-8">
+      <div className="space-y-6 md:space-y-8">
         {Object.entries(groups).map(([groupName, groupOrders]) => (
           <div key={groupName} className="space-y-4">
-            <h3 className="text-lg font-bold border-b pb-2 flex items-center gap-2">
+            <h3 className="text-base md:text-lg font-bold border-b pb-2 flex items-center gap-2">
               {groupName} <Badge variant="outline">{groupOrders.length}</Badge>
             </h3>
-            <div className="border rounded-lg overflow-hidden bg-white">
+            <div className="border rounded-lg overflow-x-auto bg-white">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>ID</TableHead>
-                    <TableHead>Acheteur</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Total</TableHead>
-                    <TableHead>Statut</TableHead>
-                    <TableHead>TCG</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead className="text-xs">ID</TableHead>
+                    <TableHead className="text-xs">Acheteur</TableHead>
+                    <TableHead className="text-xs hidden sm:table-cell">Date</TableHead>
+                    <TableHead className="text-xs">Total</TableHead>
+                    <TableHead className="text-xs hidden md:table-cell">Statut</TableHead>
+                    <TableHead className="text-xs hidden lg:table-cell">TCG</TableHead>
+                    <TableHead className="text-right text-xs">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {groupOrders.map((order) => (
                     <TableRow key={order.id}>
-                      <TableCell className="font-mono text-xs">{order.external_order_id}</TableCell>
-                      <TableCell className="font-medium">
-                        {order.buyer_name}
-                        {order.is_trust_service && <Badge className="ml-2 bg-red-100 text-red-700 border-red-200">TRUST</Badge>}
+                      <TableCell className="font-mono text-[10px] md:text-xs truncate max-w-[80px] md:max-w-none">{order.external_order_id}</TableCell>
+                      <TableCell className="font-medium text-xs md:text-sm">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-1">
+                          <span className="truncate max-w-[100px] sm:max-w-none">{order.buyer_name}</span>
+                          {order.is_trust_service && <Badge className="bg-red-100 text-red-700 border-red-200 text-[8px] h-4 w-fit">TRUST</Badge>}
+                        </div>
                       </TableCell>
-                      <TableCell className="text-xs">{new Date(order.created_at).toLocaleDateString()}</TableCell>
-                      <TableCell className="font-bold">{Number(order.total_price).toFixed(2)}€</TableCell>
-                      <TableCell>
-                        <Badge variant="secondary" className={COLUMNS.find(c => c.id === order.status)?.color}>
+                      <TableCell className="text-[10px] md:text-xs hidden sm:table-cell">{new Date(order.created_at).toLocaleDateString()}</TableCell>
+                      <TableCell className="font-bold text-xs md:text-sm">{Number(order.total_price).toFixed(2)}€</TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        <Badge variant="secondary" className={`${COLUMNS.find(c => c.id === order.status)?.color} text-[10px]`}>
                           {COLUMNS.find(c => c.id === order.status)?.label}
                         </Badge>
                       </TableCell>
-                      <TableCell className="capitalize text-xs">
+                      <TableCell className="capitalize text-[10px] md:text-xs hidden lg:table-cell">
                          {order.order_items?.[0]?.game || '-'}
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button variant="ghost" size="sm" asChild title="Voir sur CardMarket">
-                          <a
-                            href={`https://www.cardmarket.com/fr/${order.order_items?.[0]?.game === 'pokemon' ? 'Pokemon' : 'Magic'}/Orders/${order.external_order_id}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            <ExternalLink className="h-4 w-4" />
-                          </a>
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleEdit(order)}><Pencil className="h-4 w-4" /></Button>
-                        <Button variant="ghost" size="sm" onClick={() => setOrderToDelete(order.id)} className="text-red-600"><Trash2 className="h-4 w-4" /></Button>
+                        <div className="flex justify-end gap-1">
+                          <Button variant="ghost" size="icon" className="h-8 w-8 hidden sm:inline-flex" asChild title="Voir sur CardMarket">
+                            <a
+                              href={`https://www.cardmarket.com/fr/${order.order_items?.[0]?.game === 'pokemon' ? 'Pokemon' : 'Magic'}/Orders/${order.external_order_id}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              <ExternalLink className="h-4 w-4" />
+                            </a>
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(order)}><Pencil className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-red-600" onClick={() => setOrderToDelete(order.id)}><Trash2 className="h-4 w-4" /></Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -535,97 +537,97 @@ export default function SuiviPage() {
   if (isLoading) return <div className="container mx-auto py-10">Chargement du suivi...</div>;
 
   return (
-    <div className="container mx-auto py-10 space-y-8">
+    <div className="container mx-auto px-4 py-6 md:py-10 space-y-6 md:space-y-8">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Suivi des commandes</h1>
-          <p className="text-muted-foreground">Gérez vos ventes et le cycle de vie des commandes</p>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Suivi des commandes</h1>
+          <p className="text-xs md:text-sm text-muted-foreground">Gérez vos ventes et le cycle de vie des commandes</p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <div className="flex bg-slate-100 p-1 rounded-lg mr-2">
+        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+          <div className="flex bg-slate-100 p-1 rounded-lg shrink-0">
             <Button
               variant={viewMode === 'kanban' ? 'secondary' : 'ghost'}
               size="sm"
-              className={viewMode === 'kanban' ? 'bg-white shadow-sm hover:bg-white' : ''}
+              className={viewMode === 'kanban' ? 'bg-white shadow-sm hover:bg-white text-xs h-8 px-2 md:px-3' : 'text-xs h-8 px-2 md:px-3'}
               onClick={() => setViewMode('kanban')}
             >
-              <LayoutDashboard className="h-4 w-4 mr-2" /> Kanban
+              <LayoutDashboard className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1 md:mr-2" /> Kanban
             </Button>
             <Button
               variant={viewMode === 'list' ? 'secondary' : 'ghost'}
               size="sm"
-              className={viewMode === 'list' ? 'bg-white shadow-sm hover:bg-white' : ''}
+              className={viewMode === 'list' ? 'bg-white shadow-sm hover:bg-white text-xs h-8 px-2 md:px-3' : 'text-xs h-8 px-2 md:px-3'}
               onClick={() => setViewMode('list')}
             >
-              <ListIcon className="h-4 w-4 mr-2" /> Liste
+              <ListIcon className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1 md:mr-2" /> Liste
             </Button>
           </div>
-          <Button onClick={handleCreate}><Plus className="h-4 w-4 mr-2" /> Nouvelle commande</Button>
+          <Button size="sm" className="grow md:grow-0 text-xs h-8 px-3" onClick={handleCreate}><Plus className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1 md:mr-2" /> Nouvelle commande</Button>
         </div>
       </div>
 
       <Card className="bg-slate-50 border-slate-200">
         <CardContent className="p-4 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="space-y-2">
-              <label className="text-xs font-bold uppercase text-muted-foreground">Recherche</label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold uppercase text-muted-foreground">Recherche</label>
               <Input
                 placeholder="N° commande, acheteur..."
                 value={filters.search}
                 onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-                className="bg-white"
+                className="bg-white h-9"
               />
             </div>
-            <div className="space-y-2">
-              <label className="text-xs font-bold uppercase text-muted-foreground">Carte</label>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold uppercase text-muted-foreground">Carte</label>
               <Input
                 placeholder="Nom de la carte..."
                 value={filters.cardName}
                 onChange={(e) => setFilters({ ...filters, cardName: e.target.value })}
-                className="bg-white"
+                className="bg-white h-9"
               />
             </div>
-            <div className="space-y-2">
-              <label className="text-xs font-bold uppercase text-muted-foreground">TCG / Statut</label>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold uppercase text-muted-foreground">TCG / Statut</label>
               <div className="flex gap-2">
                 <Select value={filters.tcg} onValueChange={(v) => setFilters({ ...filters, tcg: v })}>
-                  <SelectTrigger className="bg-white"><SelectValue placeholder="TCG" /></SelectTrigger>
+                  <SelectTrigger className="bg-white h-9"><SelectValue placeholder="TCG" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Tous les TCG</SelectItem>
+                    <SelectItem value="all">Tous TCG</SelectItem>
                     <SelectItem value="pokemon">Pokémon</SelectItem>
                     <SelectItem value="magic">Magic</SelectItem>
                   </SelectContent>
                 </Select>
                 <Select value={filters.status} onValueChange={(v) => setFilters({ ...filters, status: v })}>
-                  <SelectTrigger className="bg-white"><SelectValue placeholder="Statut" /></SelectTrigger>
+                  <SelectTrigger className="bg-white h-9"><SelectValue placeholder="Statut" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Tous les statuts</SelectItem>
+                    <SelectItem value="all">Tous statuts</SelectItem>
                     {COLUMNS.map(c => <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
             </div>
-            <div className="space-y-2">
-              <label className="text-xs font-bold uppercase text-muted-foreground">Prix (€)</label>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold uppercase text-muted-foreground">Prix (€)</label>
               <div className="flex gap-2">
-                <Input placeholder="Min" type="number" value={filters.minPrice} onChange={(e) => setFilters({...filters, minPrice: e.target.value})} className="bg-white" />
-                <Input placeholder="Max" type="number" value={filters.maxPrice} onChange={(e) => setFilters({...filters, maxPrice: e.target.value})} className="bg-white" />
+                <Input placeholder="Min" type="number" value={filters.minPrice} onChange={(e) => setFilters({...filters, minPrice: e.target.value})} className="bg-white h-9 w-full" />
+                <Input placeholder="Max" type="number" value={filters.maxPrice} onChange={(e) => setFilters({...filters, maxPrice: e.target.value})} className="bg-white h-9 w-full" />
               </div>
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-4 pt-2 border-t">
-            <div className="flex flex-wrap items-center gap-4">
+          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 pt-2 border-t">
+            <div className="flex flex-wrap items-center gap-4 w-full lg:w-auto">
               <div className="flex items-center gap-2">
                 <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-medium">Trier par :</span>
+                <span className="text-xs font-medium shrink-0">Trier par :</span>
                 <Select value={sortBy} onValueChange={(v: any) => setSortBy(v)}>
-                  <SelectTrigger className="w-[140px] bg-white">
+                  <SelectTrigger className="w-[120px] md:w-[140px] bg-white h-8 text-xs">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="date">Date (Récents)</SelectItem>
-                    <SelectItem value="price">Prix (Décroissant)</SelectItem>
+                    <SelectItem value="price">Prix (Décr.)</SelectItem>
                     <SelectItem value="status">Statut</SelectItem>
                     <SelectItem value="tcg">TCG</SelectItem>
                   </SelectContent>
@@ -634,10 +636,10 @@ export default function SuiviPage() {
 
               {viewMode === 'list' && (
                 <div className="flex items-center gap-2">
-                  <Filter className="h-4 w-4 text-muted-foreground ml-2" />
-                  <span className="text-sm font-medium">Grouper par :</span>
+                  <Filter className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <span className="text-xs font-medium shrink-0">Grouper :</span>
                   <Select value={groupBy} onValueChange={(v: any) => setGroupBy(v)}>
-                    <SelectTrigger className="w-[140px] bg-white">
+                    <SelectTrigger className="w-[120px] md:w-[140px] bg-white h-8 text-xs">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -651,16 +653,15 @@ export default function SuiviPage() {
               )}
             </div>
 
-            <div className="flex items-center gap-2">
-               <label className="text-xs font-bold uppercase text-muted-foreground">Dates</label>
-               <Input type="date" value={filters.startDate} onChange={(e) => setFilters({...filters, startDate: e.target.value})} className="bg-white w-32 h-8 text-[11px]" />
-               <span className="text-muted-foreground">→</span>
-               <Input type="date" value={filters.endDate} onChange={(e) => setFilters({...filters, endDate: e.target.value})} className="bg-white w-32 h-8 text-[11px]" />
+            <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
+               <label className="text-[10px] font-bold uppercase text-muted-foreground shrink-0">Dates</label>
+               <Input type="date" value={filters.startDate} onChange={(e) => setFilters({...filters, startDate: e.target.value})} className="bg-white w-[110px] md:w-32 h-8 text-[10px]" />
+               <span className="text-muted-foreground text-xs">→</span>
+               <Input type="date" value={filters.endDate} onChange={(e) => setFilters({...filters, endDate: e.target.value})} className="bg-white w-[110px] md:w-32 h-8 text-[10px]" />
+               <Button variant="ghost" size="sm" onClick={() => setFilters(initialFilters)} className="text-muted-foreground hover:text-primary h-8 px-2">
+                 <RotateCcw className="h-3 w-3 sm:mr-2" /> <span className="hidden sm:inline text-xs">Réinitialiser</span>
+               </Button>
             </div>
-
-            <Button variant="ghost" size="sm" onClick={() => setFilters(initialFilters)} className="text-muted-foreground hover:text-primary">
-               <RotateCcw className="h-3 w-3 mr-2" /> Réinitialiser
-            </Button>
           </div>
         </CardContent>
       </Card>
@@ -677,18 +678,18 @@ export default function SuiviPage() {
       )}
 
       <Dialog open={!!orderToDelete} onOpenChange={(open) => !open && setOrderToDelete(null)}>
-        <DialogContent>
+        <DialogContent className="w-[95%] sm:w-full">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="text-red-500" /> Confirmer la suppression
+            <DialogTitle className="flex items-center gap-2 text-base md:text-lg">
+              <AlertTriangle className="text-red-500 h-5 w-5" /> Confirmer la suppression
             </DialogTitle>
-            <DialogDescription className="py-4">
+            <DialogDescription className="py-2 md:py-4 text-sm">
               Êtes-vous sûr de vouloir supprimer cette commande ? Cette action est irréversible.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setOrderToDelete(null)}>Annuler</Button>
-            <Button variant="destructive" onClick={handleDeleteOrder}>Supprimer</Button>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button variant="outline" size="sm" onClick={() => setOrderToDelete(null)}>Annuler</Button>
+            <Button variant="destructive" size="sm" onClick={handleDeleteOrder}>Supprimer</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

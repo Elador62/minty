@@ -154,16 +154,16 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="container mx-auto py-10 space-y-8">
-      <div className="flex justify-between items-end">
+    <div className="container mx-auto px-4 py-10 space-y-8">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Dashboard</h1>
           <p className="text-sm text-muted-foreground">Vue d'ensemble de votre activité Minty</p>
         </div>
-        <p className="text-xs text-muted-foreground italic">Données synchronisées en temps réel</p>
+        <p className="text-[10px] md:text-xs text-muted-foreground italic">Données synchronisées en temps réel</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         <Card className="border-l-4 border-l-green-500">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">CA Brut</CardTitle>
@@ -176,16 +176,16 @@ export default function DashboardPage() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Ventes Pokémon/Magic</CardTitle>
+            <CardTitle className="text-sm font-medium">Ventes PKM/MTG</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent className="space-y-1">
             <div className="flex justify-between text-xs">
-              <span className="text-blue-600">PKM</span>
+              <span className="text-blue-600 font-medium">Pokémon</span>
               <span className="font-bold">{stats.pokemonSales.toFixed(0)}€</span>
             </div>
             <div className="flex justify-between text-xs">
-              <span className="text-red-600">MTG</span>
+              <span className="text-red-600 font-medium">Magic</span>
               <span className="font-bold">{stats.magicSales.toFixed(0)}€</span>
             </div>
           </CardContent>
@@ -218,16 +218,16 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
         <Card className="lg:col-span-1">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-lg">
               <BarChart3 className="h-5 w-5 text-primary" /> Valeur Collection
             </CardTitle>
             <CardDescription>Estimation prix marché x quantité</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col items-center justify-center py-6">
-            <div className="text-4xl font-black text-primary">{stats.collectionValue.toFixed(2)} €</div>
+            <div className="text-3xl md:text-4xl font-black text-primary">{stats.collectionValue.toFixed(2)} €</div>
             <div className={`flex items-center mt-2 font-bold ${stats.valueIncrease >= 0 ? 'text-green-600' : 'text-red-600'}`}>
               {stats.valueIncrease >= 0 ? <ArrowUpRight className="h-4 w-4 mr-1" /> : <TrendingUp className="h-4 w-4 mr-1 rotate-180" />}
               {stats.valueIncrease.toFixed(1)}% vs. Prix Listé
@@ -235,34 +235,34 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="lg:col-span-2">
+        <Card className="lg:col-span-2 overflow-hidden">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-lg">
               <AlertCircle className="h-5 w-5 text-orange-500" /> Alertes Hausse de Prix (+{settings?.price_alert_threshold || 10}%)
             </CardTitle>
             <CardDescription>
               Hausse détectée sur les derniers {settings?.price_alert_period_days || 30} jours
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-0 sm:p-6 overflow-x-auto">
             {stats.alerts.length > 0 ? (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Carte</TableHead>
-                    <TableHead className="text-right">Votre Prix</TableHead>
-                    <TableHead className="text-right">Marché</TableHead>
+                    <TableHead className="min-w-[120px]">Carte</TableHead>
+                    <TableHead className="text-right whitespace-nowrap">Votre Prix</TableHead>
+                    <TableHead className="text-right whitespace-nowrap">Marché</TableHead>
                     <TableHead className="text-right">Hausse</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {stats.alerts.map((alert, i) => (
                     <TableRow key={i}>
-                      <TableCell className="font-medium">{alert.name}</TableCell>
-                      <TableCell className="text-right">{alert.listed.toFixed(2)}€</TableCell>
-                      <TableCell className="text-right font-bold text-green-600">{alert.market.toFixed(2)}€</TableCell>
+                      <TableCell className="font-medium text-xs sm:text-sm">{alert.name}</TableCell>
+                      <TableCell className="text-right text-xs sm:text-sm">{alert.listed.toFixed(2)}€</TableCell>
+                      <TableCell className="text-right font-bold text-green-600 text-xs sm:text-sm">{alert.market.toFixed(2)}€</TableCell>
                       <TableCell className="text-right">
-                        <Badge className="bg-green-100 text-green-700 hover:bg-green-100">+{alert.diff.toFixed(0)}%</Badge>
+                        <Badge className="bg-green-100 text-green-700 hover:bg-green-100 text-[10px] sm:text-xs">+{alert.diff.toFixed(0)}%</Badge>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -271,14 +271,14 @@ export default function DashboardPage() {
             ) : (
               <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
                 <CheckCircle2 className="h-12 w-12 mb-4 text-slate-200" />
-                <p>Aucune alerte de prix pour le moment.</p>
+                <p className="text-sm">Aucune alerte de prix pour le moment.</p>
               </div>
             )}
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm flex items-center gap-2">
@@ -287,8 +287,8 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent className="space-y-2">
              {stats.storageStats.map((s, i) => (
-               <div key={i} className="flex justify-between text-xs border-b border-slate-50 pb-1">
-                 <span className="truncate max-w-[120px]">{s.name}</span>
+               <div key={i} className="flex justify-between text-[11px] border-b border-slate-50 pb-1">
+                 <span className="truncate max-w-[140px]">{s.name}</span>
                  <span className="font-bold">{s.count}</span>
                </div>
              ))}
@@ -302,8 +302,8 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent className="space-y-2">
              {stats.editionStats.map((s, i) => (
-               <div key={i} className="flex justify-between text-xs border-b border-slate-50 pb-1">
-                 <span className="truncate max-w-[120px]">{s.name}</span>
+               <div key={i} className="flex justify-between text-[11px] border-b border-slate-50 pb-1">
+                 <span className="truncate max-w-[140px]">{s.name}</span>
                  <span className="font-bold">{s.count}</span>
                </div>
              ))}
@@ -317,8 +317,8 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent className="space-y-2">
              {stats.colorStats.map((s, i) => (
-               <div key={i} className="flex justify-between text-xs border-b border-slate-50 pb-1">
-                 <span className="truncate max-w-[120px]">{s.name}</span>
+               <div key={i} className="flex justify-between text-[11px] border-b border-slate-50 pb-1">
+                 <span className="truncate max-w-[140px]">{s.name}</span>
                  <span className="font-bold">{s.count}</span>
                </div>
              ))}
@@ -332,8 +332,8 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent className="space-y-2">
              {stats.typeStats.map((s, i) => (
-               <div key={i} className="flex justify-between text-xs border-b border-slate-50 pb-1">
-                 <span className="truncate max-w-[120px]">{s.name}</span>
+               <div key={i} className="flex justify-between text-[11px] border-b border-slate-50 pb-1">
+                 <span className="truncate max-w-[140px]">{s.name}</span>
                  <span className="font-bold">{s.count}</span>
                </div>
              ))}
@@ -341,14 +341,14 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <Card>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
+        <Card className="overflow-hidden">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-lg">
               <Star className="h-5 w-5 text-yellow-500" /> Top 5 Ventes
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-0 sm:p-6">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -359,8 +359,8 @@ export default function DashboardPage() {
               <TableBody>
                 {stats.topCards.map((card, i) => (
                   <TableRow key={i}>
-                    <TableCell className="font-medium">{card.name}</TableCell>
-                    <TableCell className="text-right font-bold">{card.count}</TableCell>
+                    <TableCell className="font-medium text-xs sm:text-sm">{card.name}</TableCell>
+                    <TableCell className="text-right font-bold text-xs sm:text-sm">{card.count}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -377,12 +377,12 @@ export default function DashboardPage() {
               Le marché Pokémon est actuellement en hausse sur les séries "Épée et Bouclier". Pensez à réévaluer vos prix sur les cartes Alternatives.
             </p>
             <div className="bg-white/10 p-4 rounded-lg border border-white/10">
-              <p className="text-xs font-bold uppercase text-slate-400 mb-1">Potentiel de profit</p>
-              <p className="text-xl font-bold">+{(stats.collectionValue - (stats.collectionValue / (1 + stats.valueIncrease/100))).toFixed(2)} €</p>
+              <p className="text-[10px] font-bold uppercase text-slate-400 mb-1">Potentiel de profit</p>
+              <p className="text-xl md:text-2xl font-bold">+{(stats.collectionValue - (stats.collectionValue / (1 + stats.valueIncrease/100))).toFixed(2)} €</p>
               <p className="text-[10px] text-slate-500">Si vous alignez vos prix sur le marché</p>
             </div>
           </CardContent>
-          <div className="absolute -bottom-10 -right-10 opacity-10">
+          <div className="absolute -bottom-10 -right-10 opacity-10 hidden sm:block">
              <TrendingUp size={200} />
           </div>
         </Card>

@@ -131,38 +131,38 @@ export default function SettingsPage() {
   if (isLoading) return <div className="container mx-auto py-10 text-center">Chargement des paramètres...</div>;
 
   return (
-    <div className="container mx-auto py-10 space-y-8">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold tracking-tight">Paramètres</h1>
-        <Button onClick={handleSave} disabled={isSaving}>
+    <div className="container mx-auto px-4 py-6 md:py-10 space-y-6 md:space-y-8">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Paramètres</h1>
+        <Button onClick={handleSave} disabled={isSaving} className="w-full sm:w-auto">
           <Save className="mr-2 h-4 w-4" /> {isSaving ? "Enregistrement..." : "Enregistrer"}
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
         {/* COULEURS KANBAN */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-lg">
               <Palette className="h-5 w-5" /> Couleurs du Kanban
             </CardTitle>
-            <CardDescription>Personnalisez le fond des colonnes par statut</CardDescription>
+            <CardDescription className="text-xs md:text-sm">Personnalisez le fond des colonnes par statut</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {Object.keys(STATUS_LABELS).map((status) => (
-              <div key={status} className="flex items-center justify-between">
-                <Label htmlFor={`color-${status}`}>{STATUS_LABELS[status]}</Label>
-                <div className="flex items-center gap-2">
+              <div key={status} className="flex items-center justify-between gap-4">
+                <Label htmlFor={`color-${status}`} className="text-xs md:text-sm truncate">{STATUS_LABELS[status]}</Label>
+                <div className="flex items-center gap-2 shrink-0">
                   <Input
                     id={`color-${status}`}
                     type="color"
-                    className="w-12 h-8 p-1"
+                    className="w-10 h-8 p-1 shrink-0"
                     value={settings.kanban_colors[status]}
                     onChange={(e) => updateColor(status, e.target.value)}
                   />
                   <Input
                     type="text"
-                    className="w-24 h-8 text-xs font-mono"
+                    className="w-20 h-8 text-[10px] md:text-xs font-mono shrink-0"
                     value={settings.kanban_colors[status]}
                     onChange={(e) => updateColor(status, e.target.value)}
                   />
@@ -175,10 +175,10 @@ export default function SettingsPage() {
         {/* SOURCES DE PRIX */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-lg">
               <BarChart3 className="h-5 w-5" /> Sources de données (Prix)
             </CardTitle>
-            <CardDescription>Sélectionnez les sources utilisées pour le suivi de prix</CardDescription>
+            <CardDescription className="text-xs md:text-sm">Sélectionnez les sources utilisées pour le suivi de prix</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {PRICE_SOURCES.map((source) => (
@@ -190,7 +190,7 @@ export default function SettingsPage() {
                 />
                 <label
                   htmlFor={source}
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                  className="text-xs md:text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                 >
                   {source}
                 </label>
@@ -202,42 +202,42 @@ export default function SettingsPage() {
         {/* ALERTES PRIX */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-lg">
               <Bell className="h-5 w-5" /> Alertes de prix
             </CardTitle>
-            <CardDescription>Seuil de variation pour les alertes de rentabilité</CardDescription>
+            <CardDescription className="text-xs md:text-sm">Seuil de variation pour les alertes de rentabilité</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="threshold">Seuil d'alerte (%)</Label>
+              <Label htmlFor="threshold" className="text-xs md:text-sm">Seuil d'alerte (%)</Label>
               <div className="flex items-center gap-2">
                 <Input
                   id="threshold"
                   type="number"
                   value={settings.price_alert_threshold}
                   onChange={(e) => setSettings({ ...settings, price_alert_threshold: parseFloat(e.target.value) })}
-                  className="max-w-[120px]"
+                  className="max-w-[100px] h-9"
                 />
-                <span className="text-muted-foreground">%</span>
+                <span className="text-muted-foreground text-sm">%</span>
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-[10px] md:text-xs text-muted-foreground">
                 Une alerte sera générée si le prix du marché dépasse votre prix de vente de ce pourcentage.
               </p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="period">Période d'analyse (jours)</Label>
+              <Label htmlFor="period" className="text-xs md:text-sm">Période d'analyse (jours)</Label>
               <div className="flex items-center gap-2">
                 <Input
                   id="period"
                   type="number"
                   value={settings.price_alert_period_days}
                   onChange={(e) => setSettings({ ...settings, price_alert_period_days: parseInt(e.target.value) })}
-                  className="max-w-[120px]"
+                  className="max-w-[100px] h-9"
                 />
-                <span className="text-muted-foreground">jours</span>
+                <span className="text-muted-foreground text-sm">jours</span>
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-[10px] md:text-xs text-muted-foreground">
                 Délai pour le calcul de l'évolution des prix.
               </p>
             </div>
@@ -247,55 +247,59 @@ export default function SettingsPage() {
         {/* ALERTES RETARDS */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-lg">
               <Truck className="h-5 w-5" /> Alertes de retard
             </CardTitle>
-            <CardDescription>Seuils de déclenchement des alertes (en jours)</CardDescription>
+            <CardDescription className="text-xs md:text-sm">Seuils de déclenchement des alertes (en jours)</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-4">
-              <h4 className="text-sm font-bold border-b pb-1">Retard d'envoi</h4>
+              <h4 className="text-xs md:text-sm font-bold border-b pb-1">Retard d'envoi</h4>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="ship_orange">Orange (jours)</Label>
+                  <Label htmlFor="ship_orange" className="text-[10px] md:text-xs">Orange (jours)</Label>
                   <Input
                     id="ship_orange"
                     type="number"
                     value={settings.delay_shipping_orange}
                     onChange={(e) => setSettings({ ...settings, delay_shipping_orange: parseInt(e.target.value) })}
+                    className="h-9"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="ship_red">Rouge (jours)</Label>
+                  <Label htmlFor="ship_red" className="text-[10px] md:text-xs">Rouge (jours)</Label>
                   <Input
                     id="ship_red"
                     type="number"
                     value={settings.delay_shipping_red}
                     onChange={(e) => setSettings({ ...settings, delay_shipping_red: parseInt(e.target.value) })}
+                    className="h-9"
                   />
                 </div>
               </div>
             </div>
 
             <div className="space-y-4">
-              <h4 className="text-sm font-bold border-b pb-1">Retard de réception</h4>
+              <h4 className="text-xs md:text-sm font-bold border-b pb-1">Retard de réception</h4>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="rec_orange">Orange (jours)</Label>
+                  <Label htmlFor="rec_orange" className="text-[10px] md:text-xs">Orange (jours)</Label>
                   <Input
                     id="rec_orange"
                     type="number"
                     value={settings.delay_reception_orange}
                     onChange={(e) => setSettings({ ...settings, delay_reception_orange: parseInt(e.target.value) })}
+                    className="h-9"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="rec_red">Rouge (jours)</Label>
+                  <Label htmlFor="rec_red" className="text-[10px] md:text-xs">Rouge (jours)</Label>
                   <Input
                     id="rec_red"
                     type="number"
                     value={settings.delay_reception_red}
                     onChange={(e) => setSettings({ ...settings, delay_reception_red: parseInt(e.target.value) })}
+                    className="h-9"
                   />
                 </div>
               </div>
@@ -306,10 +310,10 @@ export default function SettingsPage() {
         {/* AFFICHAGE COLLECTION */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-lg">
               <Eye className="h-5 w-5" /> Affichage Collection
             </CardTitle>
-            <CardDescription>Préférences de visualisation des détails d'une carte</CardDescription>
+            <CardDescription className="text-xs md:text-sm">Préférences de visualisation des détails d'une carte</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <RadioGroup
@@ -318,11 +322,11 @@ export default function SettingsPage() {
             >
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="modal" id="mode-modal" />
-                <Label htmlFor="mode-modal">Fenêtre modale (Centre)</Label>
+                <Label htmlFor="mode-modal" className="text-xs md:text-sm">Fenêtre modale (Centre)</Label>
               </div>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="sheet" id="mode-sheet" />
-                <Label htmlFor="mode-sheet">Volet latéral (Droite)</Label>
+                <Label htmlFor="mode-sheet" className="text-xs md:text-sm">Volet latéral (Droite)</Label>
               </div>
             </RadioGroup>
           </CardContent>
@@ -331,10 +335,10 @@ export default function SettingsPage() {
         {/* MÉTHODES D'ENVOI */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-lg">
               <Truck className="h-5 w-5" /> Méthodes d'envoi
             </CardTitle>
-            <CardDescription>Configurez vos options de livraison pour les commandes</CardDescription>
+            <CardDescription className="text-xs md:text-sm">Configurez vos options de livraison</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
              <div className="space-y-2">
@@ -342,6 +346,7 @@ export default function SettingsPage() {
                   <div key={i} className="flex gap-2">
                     <Input
                       value={method}
+                      className="h-9 text-xs md:text-sm"
                       onChange={(e) => {
                         const next = [...settings.shipping_methods];
                         next[i] = e.target.value;
@@ -351,7 +356,7 @@ export default function SettingsPage() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="text-destructive"
+                      className="text-destructive h-9 w-9 shrink-0"
                       onClick={() => {
                         const next = settings.shipping_methods.filter((_: any, idx: number) => idx !== i);
                         setSettings({ ...settings, shipping_methods: next });
@@ -364,7 +369,7 @@ export default function SettingsPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="w-full mt-2"
+                  className="w-full mt-2 text-xs"
                   onClick={() => {
                     setSettings({
                       ...settings,
