@@ -1,4 +1,4 @@
-export async function getCardPrice(name: string, game: string, expansion?: string, isFoil?: boolean, nameEn?: string): Promise<number | null> {
+export async function getCardPrice(name: string, game: string, expansion?: string, isFoil?: boolean, nameEn?: string, setCode?: string): Promise<number | null> {
   // On utilise le nom anglais en priorité s'il est fourni
   const cleanName = (nameEn || name).split(' (')[0].replace(/\s*\d+\s*$/, '').trim();
 
@@ -6,8 +6,11 @@ export async function getCardPrice(name: string, game: string, expansion?: strin
     if (game === 'magic') {
       // Structure exacte demandée : https://api.scryfall.com/cards/named?exact="<card_name>"&set=<set_code>
       let url = `https://api.scryfall.com/cards/named?exact=${encodeURIComponent(`"${cleanName}"`)}`;
-      if (expansion && expansion.length <= 5) {
-        url += `&set=${encodeURIComponent(expansion)}`;
+
+      // On utilise le setCode s'il est fourni, sinon on tente avec l'expansion si elle ressemble à un code
+      const set = setCode || (expansion && expansion.length <= 5 ? expansion : null);
+      if (set) {
+        url += `&set=${encodeURIComponent(set)}`;
       }
 
       const response = await fetch(url);
@@ -22,7 +25,8 @@ export async function getCardPrice(name: string, game: string, expansion?: strin
       }
 
       // Fallback search si named échoue
-      const searchQuery = expansion && expansion.length <= 5 ? `!"${cleanName}" set:${expansion}` : `!"${cleanName}"`;
+      const sc = setCode || (expansion && expansion.length <= 5 ? expansion : null);
+      const searchQuery = sc ? `!"${cleanName}" set:${sc}` : `!"${cleanName}"`;
       const searchRes = await fetch(`https://api.scryfall.com/cards/search?q=${encodeURIComponent(searchQuery)}`);
       const searchData = await searchRes.json();
       if (searchData.data?.[0]?.prices) {

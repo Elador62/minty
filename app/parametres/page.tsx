@@ -40,6 +40,10 @@ export default function SettingsPage() {
     price_sources: ["Trend CardMarket", "Avg Sell CardMarket"],
     price_alert_threshold: 10,
     price_alert_period_days: 30,
+    delay_shipping_orange: 4,
+    delay_shipping_red: 7,
+    delay_reception_orange: 5,
+    delay_reception_red: 7,
     card_view_mode: 'modal',
     shipping_methods: [
       "Lettre Internationale (Priority Letter)(max. 20g)",
@@ -91,6 +95,10 @@ export default function SettingsPage() {
         price_sources: settings.price_sources,
         price_alert_threshold: settings.price_alert_threshold,
         price_alert_period_days: settings.price_alert_period_days,
+        delay_shipping_orange: settings.delay_shipping_orange,
+        delay_shipping_red: settings.delay_shipping_red,
+        delay_reception_orange: settings.delay_reception_orange,
+        delay_reception_red: settings.delay_reception_red,
         card_view_mode: settings.card_view_mode,
         shipping_methods: settings.shipping_methods
       }, {
@@ -232,6 +240,65 @@ export default function SettingsPage() {
               <p className="text-xs text-muted-foreground">
                 Délai pour le calcul de l'évolution des prix.
               </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* ALERTES RETARDS */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Truck className="h-5 w-5" /> Alertes de retard
+            </CardTitle>
+            <CardDescription>Seuils de déclenchement des alertes (en jours)</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="space-y-4">
+              <h4 className="text-sm font-bold border-b pb-1">Retard d'envoi</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="ship_orange">Orange (jours)</Label>
+                  <Input
+                    id="ship_orange"
+                    type="number"
+                    value={settings.delay_shipping_orange}
+                    onChange={(e) => setSettings({ ...settings, delay_shipping_orange: parseInt(e.target.value) })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="ship_red">Rouge (jours)</Label>
+                  <Input
+                    id="ship_red"
+                    type="number"
+                    value={settings.delay_shipping_red}
+                    onChange={(e) => setSettings({ ...settings, delay_shipping_red: parseInt(e.target.value) })}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h4 className="text-sm font-bold border-b pb-1">Retard de réception</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="rec_orange">Orange (jours)</Label>
+                  <Input
+                    id="rec_orange"
+                    type="number"
+                    value={settings.delay_reception_orange}
+                    onChange={(e) => setSettings({ ...settings, delay_reception_orange: parseInt(e.target.value) })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="rec_red">Rouge (jours)</Label>
+                  <Input
+                    id="rec_red"
+                    type="number"
+                    value={settings.delay_reception_red}
+                    onChange={(e) => setSettings({ ...settings, delay_reception_red: parseInt(e.target.value) })}
+                  />
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>

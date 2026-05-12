@@ -157,9 +157,14 @@ export default function SuiviPage() {
       }
     }
 
+    const updateData: any = { status: nextStatus };
+    if (nextStatus === 'shipped') {
+      updateData.shipped_at = new Date().toISOString();
+    }
+
     const { error } = await supabase
       .from('orders')
-      .update({ status: nextStatus })
+      .update(updateData)
       .eq('id', orderId);
 
     if (error) {
