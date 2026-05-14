@@ -3,13 +3,14 @@
 import { useState } from "react";
 import { parseCardMarketEmail, ParsedOrder } from "@/lib/parser/emailParser";
 import { parseCardMarketCSV, ParsedCSVOrder } from "@/lib/parser/csvParser";
+import { EmailSyncTrigger } from "@/components/import/EmailSyncTrigger";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { AlertCircle, CheckCircle2, Import, Loader2, AlertTriangle, FileSpreadsheet, Mail } from "lucide-react";
+import { AlertCircle, CheckCircle2, Import, Loader2, AlertTriangle, FileSpreadsheet, Mail, RefreshCw } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { getCardThumbnail } from "@/lib/cardmarket/images";
@@ -31,7 +32,13 @@ const STATUS_RANK: Record<string, number> = {
 };
 
 export default function ImportPage() {
+  const [user, setUser] = useState<any>(null);
   const [inputText, setInputText] = useState("");
+
+  useState(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data }) => setUser(data.user));
+  });
   const [manualDate, setManualDate] = useState(new Date().toISOString().split('T')[0]);
   const [importMode, setImportMode] = useState<"email" | "csv">("email");
   const [parsedOrders, setParsedOrders] = useState<any[]>([]);
@@ -163,10 +170,29 @@ export default function ImportPage() {
       </div>
 
       <Tabs defaultValue="email" className="w-full" onValueChange={(v: any) => setImportMode(v)}>
-        <TabsList className="grid w-full grid-cols-2 max-w-md h-9 md:h-10">
-          <TabsTrigger value="email" className="text-xs md:text-sm"><Mail className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1 md:mr-2" /> Email</TabsTrigger>
-          <TabsTrigger value="csv" className="text-xs md:text-sm"><FileSpreadsheet className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1 md:mr-2" /> CSV</TabsTrigger>
-        </TabsList>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+          <TabsList className="grid w-full grid-cols-2 max-w-md h-9 md:h-10">
+            <TabsTrigger value="email" className="text-xs md:text-sm"><Mail className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1 md:mr-2" /> Email</TabsTrigger>
+            <TabsTrigger value="csv" className="text-xs md:text-sm"><FileSpreadsheet className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1 md:mr-2" /> CSV</TabsTrigger>
+          </TabsList>
+
+          {importMode === 'email' && user && (
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <span className="text-xs text-muted-foreground hidden md:inline">Synchronisation auto :</span>
+              <div className="flex-1 sm:flex-none">
+                <Button variant="outline" size="sm" className="w-full sm:w-auto h-9 text-xs" asChild>
+                   <div className="flex items-center cursor-pointer" onClick={() => document.getElementById('sync-trigger-btn')?.click()}>
+                     <RefreshCw className="mr-2 h-3.5 w-3.5" /> Scanner mes mails
+                   </div>
+                </Button>
+                {/* On cache le vrai trigger ici car il est déjà dans la navbar, mais on peut le réutiliser ou simuler le clic */}
+                <div className="hidden">
+                    <EmailSyncTrigger user={user} />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
 
         <Card className="mt-6 overflow-hidden">
           <CardHeader className="p-4 md:p-6">
