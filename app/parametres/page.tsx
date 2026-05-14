@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Save, Palette, BarChart3, Bell, Eye, Truck, Plus, Trash2 } from "lucide-react";
+import { Save, Palette, BarChart3, Bell, Eye, Truck, Plus, Trash2, Mail, Copy, RefreshCw } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 const PRICE_SOURCES = [
@@ -100,7 +100,8 @@ export default function SettingsPage() {
         delay_reception_orange: settings.delay_reception_orange,
         delay_reception_red: settings.delay_reception_red,
         card_view_mode: settings.card_view_mode,
-        shipping_methods: settings.shipping_methods
+        shipping_methods: settings.shipping_methods,
+        import_token: settings.import_token
       }, {
         onConflict: 'user_id'
       });
@@ -127,6 +128,18 @@ export default function SettingsPage() {
       : [...current, source];
     setSettings({ ...settings, price_sources: next });
   };
+
+  const generateToken = () => {
+    const newToken = crypto.randomUUID();
+    setSettings({ ...settings, import_token: newToken });
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast({ title: "Copié !", description: "L'adresse a été copiée dans le presse-papier." });
+  };
+
+  const importEmail = `minty.imports+${settings.import_token}@gmail.com`;
 
   if (isLoading) return <div className="container mx-auto py-10 text-center">Chargement des paramètres...</div>;
 
@@ -380,6 +393,57 @@ export default function SettingsPage() {
                   <Plus className="h-4 w-4 mr-2" /> Ajouter une méthode
                 </Button>
              </div>
+          </CardContent>
+        </Card>
+
+        {/* IMPORTATION AUTOMATIQUE */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Mail className="h-5 w-5" /> Importation Automatique
+            </CardTitle>
+            <CardDescription className="text-xs md:text-sm">Configurez le transfert automatique de vos emails CardMarket</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {!settings.import_token ? (
+              <div className="text-center py-4 space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Générez une adresse unique pour transférer vos emails de vente CardMarket vers Minty.
+                </p>
+                <Button onClick={generateToken} variant="outline" className="w-full">
+                  <RefreshCw className="mr-2 h-4 w-4" /> Générer mon adresse d'import
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-xs md:text-sm">Votre adresse de transfert :</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      readOnly
+                      value={importEmail}
+                      className="bg-slate-50 font-mono text-[10px] md:text-xs h-9"
+                    />
+                    <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => copyToClipboard(importEmail)}>
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="p-3 bg-blue-50 rounded-lg border border-blue-100 space-y-2">
+                  <h4 className="text-xs font-bold text-blue-800 flex items-center gap-1">
+                    <Bell className="h-3 w-3" /> Comment ça marche ?
+                  </h4>
+                  <p className="text-[10px] md:text-xs text-blue-700 leading-relaxed">
+                    Configurez une règle de transfert dans votre boîte mail pour envoyer automatiquement les emails de <b>CardMarket</b> vers cette adresse. Minty les analysera dès votre connexion.
+                  </p>
+                </div>
+
+                <Button onClick={generateToken} variant="ghost" size="sm" className="w-full text-[10px] text-muted-foreground">
+                  Réinitialiser le jeton (l'ancienne adresse ne fonctionnera plus)
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

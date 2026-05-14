@@ -9,6 +9,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { getActiveAlerts } from "@/lib/utils/alerts";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { EmailSyncTrigger } from "../import/EmailSyncTrigger";
 
 export function Navbar() {
   const [user, setUser] = useState<any>(null);
@@ -86,6 +87,8 @@ export function Navbar() {
         <div className="flex items-center gap-2 md:gap-4">
           {user ? (
             <>
+              <EmailSyncTrigger user={user} />
+
               <Link href="/alertes" className="relative">
                 <Button variant="ghost" size="icon" className="h-9 w-9 md:h-10 md:w-10">
                   <Bell className="h-5 w-5" />
